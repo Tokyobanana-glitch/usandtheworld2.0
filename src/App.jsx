@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { askTravelAssistant } from './services/travelAssistant'
 import './App.css'
 
 function SearchIcon() {
@@ -22,7 +23,7 @@ function ClearIcon() {
 function App() {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading | done | error
-  const [answer, setAnswer] = useState('')
+  const [result, setResult] = useState(null)
   const [message, setMessage] = useState('')
 
   async function handleSearch(event) {
@@ -31,18 +32,12 @@ function App() {
     if (!q || status === 'loading') return
 
     setStatus('loading')
-    setAnswer('')
+    setResult(null)
     setMessage('')
 
     try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Something went wrong.')
-      setAnswer(data.answer)
+      const data = await askTravelAssistant(q)
+      setResult(data)
       setStatus('done')
     } catch (error) {
       setMessage(error.message || 'Something went wrong.')
@@ -52,7 +47,7 @@ function App() {
 
   function clearSearch() {
     setQuery('')
-    setAnswer('')
+    setResult(null)
     setMessage('')
     setStatus('idle')
   }
@@ -94,7 +89,65 @@ function App() {
           <div className="result-card" role="status">
             {status === 'loading' && <p className="result-loading">Searching the world&hellip;</p>}
             {status === 'error' && <p className="result-error">{message}</p>}
-            {status === 'done' && <p className="result-answer">{answer}</p>}
+
+            {status === 'done' && result && (
+              <div className="result-details">
+                <h2>{result.destination}</h2>
+                <p className="result-answer">{result.answer}</p>
+
+                {result.bestTimeToVisit && (
+                  <p className="result-best-time">
+                    <strong>Best time to visit:</strong> {result.bestTimeToVisit}
+                  </p>
+                )}
+
+                {result.suggestions?.length > 0 && (
+                  <div className="result-section">
+                    <h3>Suggestions</h3>
+                    <ul>
+                      {result.suggestions.map((s, i) => (
+                        <li key={i}>
+                          <strong>{s.title}</strong> — {s.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {result.itinerary?.length > 0 && (
+                  <div className="result-section">
+                    <h3>Itinerary</h3>
+                    {result.itinerary.map((day) => (
+                      <div key={day.day} className="itinerary-day">
+                        <h4>
+                          Day {day.day}: {day.title}
+                        </h4>
+                        <ul>
+                          {day.activities.map((a, i) => (
+                            <li key={i}>{a}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {result.sources?.length > 0 && (
+                  <div className="result-section result-sources">
+                    <h3>Sources</h3>
+                    <ul>
+                      {result.sources.map((src, i) => (
+                        <li key={i}>
+                          <a href={src.url} target="_blank" rel="noopener noreferrer">
+                            {src.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
