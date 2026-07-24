@@ -60,9 +60,14 @@ const ITINERARY_SCHEMA = {
   additionalProperties: false,
 }
 
-const SYSTEM_PROMPT = `You are a knowledgeable, enthusiastic travel guide. Use web search to ground your answer in current, accurate information (prices, seasons, opening hours, events, safety notes) — don't rely on memory alone for anything time-sensitive.
-Answer the traveler's question directly and warmly, then propose a short list of suggestions and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary. If no trip length is implied, return an empty itinerary array.
-List the real sources you used in "sources".
+const SYSTEM_PROMPT = `You are a meticulous, knowledgeable travel guide. You have live web search — you must use it, not memory alone, for anything time-sensitive or checkable: prices, hours, seasonal status, closures, damage, safety incidents, and any specific named place you plan to mention.
+
+Before recommending or describing ANY specific named place (a landmark, museum, restaurant, trail, venue), search to confirm it is still open, operating, and in the condition you describe. Historic sites, restaurants, and attractions close, burn down, get demolished, or change — recommending one as if nothing has changed when it has is a serious factual error. If a place you would normally suggest has recently closed, been destroyed, or is under renovation, say so plainly instead of recommending it as open, and offer a real current alternative if one exists.
+
+If the traveler's question itself references a specific event, incident, or claim (e.g. "did X burn down", "is Y still open", "what happened to Z"), your top priority is verifying that exact claim via search and answering it directly and accurately — do not sidestep it with generic suggestions.
+
+Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary using only currently-open places. If no trip length is implied, return an empty itinerary array.
+List the real sources you used in "sources", including whatever you used to verify current status.
 This may be an ongoing conversation — if earlier turns are included, treat the new question as a follow-up (e.g. still about the same destination or trip) unless the traveler clearly changes topic, and don't repeat details already covered.`
 
 function sanitizeHistory(history) {
@@ -87,21 +92,31 @@ export default async function handler(req, res) {
 
   try {
     const anthropic = await getClient()
-    const response = await anthropic.messages.create({
+    const baseMessages = [...sanitizeHistory(history), { role: 'user', content: query }]
+    const requestParams = {
       model: 'claude-sonnet-5', // claude-opus-4-8 is gated behind AI Gateway paid credits on the free tier
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
-      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
+      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 8 }],
       output_config: {
         effort: 'medium',
         format: { type: 'json_schema', schema: ITINERARY_SCHEMA },
       },
-      messages: [...sanitizeHistory(history), { role: 'user', content: query }],
-    })
+    }
+
+    let messages = baseMessages
+    let response = await anthropic.messages.create({ ...requestParams, messages })
+
+    // The server-side web-search loop caps at 10 steps; if it's still mid-verification,
+    // stop_reason is "pause_turn" with no final answer yet — resume a few times.
+    for (let i = 0; i < 3 && response.stop_reason === 'pause_turn'; i++) {
+      messages = [...messages, { role: 'assistant', content: response.content }]
+      response = await anthropic.messages.create({ ...requestParams, messages })
+    }
 
     // Web search adds tool-use blocks before the final answer — grab the last text block.
     const textBlock = [...response.content].reverse().find((b) => b.type === 'text')
-    if (!textBlock) throw new Error('No text response from model')
+    if (!textBlock) throw new Error(`No text response from model (stop_reason: ${response.stop_reason})`)
 
     res.status(200).json(JSON.parse(textBlock.text))
   } catch (err) {
