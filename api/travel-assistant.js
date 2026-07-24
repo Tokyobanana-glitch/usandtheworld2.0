@@ -1,6 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const anthropic = new Anthropic() // reads ANTHROPIC_API_KEY from env — never expose this in the browser
+// Routes through Vercel's AI Gateway using the project's auto-refreshed OIDC
+// token — no manual API key needed. If ANTHROPIC_API_KEY is ever set (e.g. to
+// unlock a model your AI Gateway plan restricts), it takes over automatically.
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic()
+  : new Anthropic({
+      baseURL: 'https://ai-gateway.vercel.sh',
+      apiKey: '',
+      authToken: process.env.VERCEL_OIDC_TOKEN,
+    })
 
 const ITINERARY_SCHEMA = {
   type: 'object',
@@ -70,7 +79,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-8', // swap to "claude-sonnet-5" for lower latency/cost
+      model: 'claude-sonnet-5', // claude-opus-4-8 is gated behind AI Gateway paid credits on the free tier
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
