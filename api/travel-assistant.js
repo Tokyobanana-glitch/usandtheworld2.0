@@ -62,7 +62,16 @@ const ITINERARY_SCHEMA = {
 
 const SYSTEM_PROMPT = `You are a knowledgeable, enthusiastic travel guide. Use web search to ground your answer in current, accurate information (prices, seasons, opening hours, events, safety notes) — don't rely on memory alone for anything time-sensitive.
 Answer the traveler's question directly and warmly, then propose a short list of suggestions and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary. If no trip length is implied, return an empty itinerary array.
-List the real sources you used in "sources".`
+List the real sources you used in "sources".
+This may be an ongoing conversation — if earlier turns are included, treat the new question as a follow-up (e.g. still about the same destination or trip) unless the traveler clearly changes topic, and don't repeat details already covered.`
+
+function sanitizeHistory(history) {
+  if (!Array.isArray(history)) return []
+  return history
+    .filter((turn) => turn && (turn.role === 'user' || turn.role === 'assistant') && typeof turn.content === 'string')
+    .slice(-20)
+    .map((turn) => ({ role: turn.role, content: turn.content }))
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -70,7 +79,7 @@ export default async function handler(req, res) {
     return
   }
 
-  const { query } = req.body ?? {}
+  const { query, history } = req.body ?? {}
   if (!query || typeof query !== 'string') {
     res.status(400).json({ error: "Missing 'query' string in request body" })
     return
@@ -87,7 +96,7 @@ export default async function handler(req, res) {
         effort: 'medium',
         format: { type: 'json_schema', schema: ITINERARY_SCHEMA },
       },
-      messages: [{ role: 'user', content: query }],
+      messages: [...sanitizeHistory(history), { role: 'user', content: query }],
     })
 
     // Web search adds tool-use blocks before the final answer — grab the last text block.

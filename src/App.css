@@ -137,6 +137,20 @@
   }
 }
 
+.thread-turn + .thread-turn {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.turn-question {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 10px;
+}
+
 .result-loading {
   color: rgba(255, 255, 255, 0.75);
   font-style: italic;
@@ -144,6 +158,22 @@
 
 .result-error {
   color: #ffb4b4;
+}
+
+.reset-conversation {
+  display: block;
+  margin: 20px auto 0;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.reset-conversation:hover {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .result-details h2 {
