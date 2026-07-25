@@ -55,8 +55,14 @@ const ITINERARY_SCHEMA = {
         additionalProperties: false,
       },
     },
+    followUps: {
+      type: 'array',
+      description:
+        '2-4 short, specific next questions or actions this exact traveler would want to ask next, grounded in what you just answered — never generic filler. Phrase each as the literal next message the traveler would send, first person, short (e.g. "What neighborhood should I stay in?", "Build me a 3-day itinerary for this"). Do not suggest building an itinerary if one was already provided above.',
+      items: { type: 'string' },
+    },
   },
-  required: ['destination', 'answer', 'bestTimeToVisit', 'suggestions', 'itinerary', 'sources'],
+  required: ['destination', 'answer', 'bestTimeToVisit', 'suggestions', 'itinerary', 'sources', 'followUps'],
   additionalProperties: false,
 }
 
@@ -68,6 +74,7 @@ If the traveler's question itself references a specific event, incident, or clai
 
 Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary using only currently-open places. If no trip length is implied, return an empty itinerary array.
 List the real sources you used in "sources", including whatever you used to verify current status.
+Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.
 This may be an ongoing conversation — if earlier turns are included, treat the new question as a follow-up (e.g. still about the same destination or trip) unless the traveler clearly changes topic, and don't repeat details already covered.`
 
 function sanitizeHistory(history) {

@@ -2,6 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import { askTravelAssistant } from './services/travelAssistant'
 import './App.css'
 
+const TYPEWRITER_DESTINATIONS = [
+  'Barcelona',
+  'Miami',
+  'Tokyo',
+  'Bangkok',
+  'Istanbul',
+  'Cape Town',
+  'Reykjavík',
+  'Marrakech',
+  'Rio de Janeiro',
+  'Bali',
+]
+const TYPE_MS = 70
+const DELETE_MS = 40
+const HOLD_MS = 1400
+const PAUSE_MS = 400
+
 function SearchIcon() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -83,17 +100,71 @@ function TurnAnswer({ result }) {
 
 function App() {
   const [query, setQuery] = useState('')
+  const [placeholder, setPlaceholder] = useState('Where do you want to go?')
   const [thread, setThread] = useState([]) // { id, query, status, result?, message? }
   const [submitting, setSubmitting] = useState(false)
   const threadEndRef = useRef(null)
+  const inputRef = useRef(null)
+  const queryRef = useRef(query)
+
+  useEffect(() => {
+    queryRef.current = query
+  }, [query])
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [thread])
 
-  async function handleSearch(event) {
-    event.preventDefault()
-    const q = query.trim()
+  // Typewriter placeholder inviting a first search — only before a conversation starts.
+  useEffect(() => {
+    if (thread.length > 0) return
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setPlaceholder('Where do you want to go? Try Tokyo, Bali, Rome…')
+      return
+    }
+
+    let cityIndex = 0
+    let charIndex = 0
+    let deleting = false
+    let timeoutId
+
+    function tick() {
+      if (queryRef.current) {
+        timeoutId = setTimeout(tick, 300)
+        return
+      }
+
+      const city = TYPEWRITER_DESTINATIONS[cityIndex % TYPEWRITER_DESTINATIONS.length]
+
+      if (!deleting) {
+        charIndex++
+        setPlaceholder(`I want to travel to ${city.slice(0, charIndex)}`)
+        if (charIndex === city.length) {
+          deleting = true
+          timeoutId = setTimeout(tick, HOLD_MS)
+          return
+        }
+        timeoutId = setTimeout(tick, TYPE_MS)
+      } else {
+        charIndex--
+        setPlaceholder(`I want to travel to ${city.slice(0, charIndex)}`)
+        if (charIndex === 0) {
+          deleting = false
+          cityIndex++
+          timeoutId = setTimeout(tick, PAUSE_MS)
+          return
+        }
+        timeoutId = setTimeout(tick, DELETE_MS)
+      }
+    }
+
+    timeoutId = setTimeout(tick, PAUSE_MS)
+    return () => clearTimeout(timeoutId)
+  }, [thread.length])
+
+  async function runSearch(rawQuery) {
+    const q = rawQuery.trim()
     if (!q || submitting) return
 
     const id = `${Date.now()}-${Math.random()}`
@@ -120,6 +191,11 @@ function App() {
     }
   }
 
+  function handleSearch(event) {
+    event.preventDefault()
+    runSearch(query)
+  }
+
   function clearQuery() {
     setQuery('')
   }
@@ -128,6 +204,14 @@ function App() {
     setThread([])
     setQuery('')
   }
+
+  function focusForNewQuestion() {
+    setQuery('')
+    inputRef.current?.focus()
+  }
+
+  const lastTurn = thread[thread.length - 1]
+  const showFollowUps = lastTurn?.status === 'done' && lastTurn.result
 
   return (
     <main className="hero-page">
@@ -141,10 +225,11 @@ function App() {
             <SearchIcon />
           </span>
           <input
+            ref={inputRef}
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={thread.length ? 'Ask a follow-up…' : 'Where do you want to go?'}
+            placeholder={thread.length ? 'Ask a follow-up…' : placeholder}
             aria-label="Search a destination or travel question"
             autoComplete="off"
           />
@@ -169,6 +254,20 @@ function App() {
                 {turn.status === 'done' && turn.result && <TurnAnswer result={turn.result} />}
               </div>
             ))}
+
+            {showFollowUps && (
+              <div className="followups">
+                {lastTurn.result.followUps?.map((text, i) => (
+                  <button key={i} type="button" className="followup-chip" onClick={() => runSearch(text)}>
+                    {text}
+                  </button>
+                ))}
+                <button type="button" className="followup-chip followup-chip--muted" onClick={focusForNewQuestion}>
+                  Ask something else
+                </button>
+              </div>
+            )}
+
             <div ref={threadEndRef} />
 
             <button type="button" className="reset-conversation" onClick={resetConversation}>
