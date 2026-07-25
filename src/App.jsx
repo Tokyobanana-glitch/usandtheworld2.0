@@ -18,6 +18,55 @@ const TYPE_MS = 70
 const DELETE_MS = 40
 const HOLD_MS = 1400
 const PAUSE_MS = 400
+const LOADING_PHRASE_MS = 2500
+
+const TOPIC_PREFIXES = [
+  /^i want to travel to\s+/i,
+  /^i want to go to\s+/i,
+  /^i'?d like to (go|travel) to\s+/i,
+  /^travel(ing)? to\s+/i,
+  /^trip to\s+/i,
+  /^vacation (to|in)\s+/i,
+  /^weekend\s+(trip\s+)?(to|in|at)\s+/i,
+  /^visit(ing)?\s+/i,
+  /^\d+\s*(day|days|week|weeks)\s+in\s+/i,
+  /^(best|top|good|great)\s+.+?\s+(near|in|around|for)\s+/i,
+]
+const TOPIC_TRAILING_SEASON = /\s+(in|during)\s+(spring|summer|fall|autumn|winter|january|february|march|april|may|june|july|august|september|october|november|december|\d{4}).*$/i
+const TOPIC_EXCLUDE_WORDS =
+  /\?|burnt|burned|fire|destroy|open|close|food|eat|stay|cost|price|weather|safe|what|when|how|why|there/i
+
+function extractTopic(rawQuery) {
+  let q = rawQuery.trim()
+  for (const re of TOPIC_PREFIXES) {
+    if (re.test(q)) {
+      q = q.replace(re, '').trim()
+      break
+    }
+  }
+  q = q.replace(TOPIC_TRAILING_SEASON, '').trim()
+
+  if (!q || q.length > 28 || TOPIC_EXCLUDE_WORDS.test(q)) return null
+  return q
+}
+
+function buildLoadingPhrases(rawQuery) {
+  const topic = extractTopic(rawQuery)
+  if (topic) {
+    return [
+      `Searching for the best places to visit around ${topic}…`,
+      `Scanning the latest articles and local sources for ${topic}…`,
+      `Checking current conditions and openings near ${topic}…`,
+      `Cross-referencing real-time results to get ${topic} right…`,
+    ]
+  }
+  return [
+    'Searching the web for the most current information…',
+    'Scanning the latest articles and local sources…',
+    'Checking facts and current conditions…',
+    'Cross-referencing real-time results to get this right…',
+  ]
+}
 
 function SearchIcon() {
   return (
@@ -103,6 +152,8 @@ function App() {
   const [placeholder, setPlaceholder] = useState('Where do you want to go?')
   const [thread, setThread] = useState([]) // { id, query, status, result?, message? }
   const [submitting, setSubmitting] = useState(false)
+  const [loadingPhrases, setLoadingPhrases] = useState([])
+  const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0)
   const threadEndRef = useRef(null)
   const inputRef = useRef(null)
   const queryRef = useRef(query)
@@ -163,6 +214,15 @@ function App() {
     return () => clearTimeout(timeoutId)
   }, [thread.length])
 
+  // Rotate the loading phrase every few seconds while a search is in flight.
+  useEffect(() => {
+    if (!submitting) return
+    const id = setInterval(() => {
+      setLoadingPhraseIndex((i) => (i + 1) % (loadingPhrases.length || 1))
+    }, LOADING_PHRASE_MS)
+    return () => clearInterval(id)
+  }, [submitting, loadingPhrases])
+
   async function runSearch(rawQuery) {
     const q = rawQuery.trim()
     if (!q || submitting) return
@@ -172,6 +232,8 @@ function App() {
 
     setSubmitting(true)
     setQuery('')
+    setLoadingPhrases(buildLoadingPhrases(q))
+    setLoadingPhraseIndex(0)
     setThread((prev) => [...prev, { id, query: q, status: 'loading' }])
 
     const history = priorTurns.flatMap((t) => [
@@ -249,7 +311,11 @@ function App() {
             {thread.map((turn) => (
               <div key={turn.id} className="thread-turn">
                 <p className="turn-question">You asked — {turn.query}</p>
-                {turn.status === 'loading' && <p className="result-loading">Searching the world&hellip;</p>}
+                {turn.status === 'loading' && (
+                  <p className="result-loading" key={loadingPhraseIndex}>
+                    {loadingPhrases[loadingPhraseIndex] || 'Searching the world…'}
+                  </p>
+                )}
                 {turn.status === 'error' && <p className="result-error">{turn.message}</p>}
                 {turn.status === 'done' && turn.result && <TurnAnswer result={turn.result} />}
               </div>

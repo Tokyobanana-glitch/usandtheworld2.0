@@ -154,6 +154,18 @@
 .result-loading {
   color: rgba(255, 255, 255, 0.75);
   font-style: italic;
+  animation: phrase-fade 0.4s ease-out;
+}
+
+@keyframes phrase-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .result-error {
