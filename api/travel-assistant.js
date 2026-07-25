@@ -94,12 +94,17 @@ export default async function handler(req, res) {
     const anthropic = await getClient()
     const baseMessages = [...sanitizeHistory(history), { role: 'user', content: query }]
     const requestParams = {
-      model: 'claude-sonnet-5', // claude-opus-4-8 is gated behind AI Gateway paid credits on the free tier
-      max_tokens: 8192,
+      // Haiku 4.5 answers simple fact-checks in ~10-20s and full itineraries in
+      // ~30-40s — roughly 2-4x faster than Sonnet 5 here, with comparable
+      // accuracy once search-verification is required by the system prompt.
+      // Haiku doesn't support output_config.effort (errors if set) or the
+      // newer web_search_20260209 dynamic-filtering tool, so this uses the
+      // plain web_search_20250305 variant instead.
+      model: 'claude-haiku-4-5',
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 8 }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
       output_config: {
-        effort: 'medium',
         format: { type: 'json_schema', schema: ITINERARY_SCHEMA },
       },
     }
