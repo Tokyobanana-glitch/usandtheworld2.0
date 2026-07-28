@@ -86,6 +86,91 @@ function ClearIcon() {
   )
 }
 
+const STATUS_LABELS = { open: 'Open', closed: 'Closed', seasonal: 'Seasonal', unverified: 'Unverified' }
+
+function StatusChip({ status }) {
+  const key = STATUS_LABELS[status] ? status : 'unverified'
+  return <span className={`status-chip status-chip--${key}`}>{STATUS_LABELS[key]}</span>
+}
+
+function LegConnector({ leg }) {
+  if (!leg) return null
+  const icon = leg.mode === 'walking' ? '🚶' : '🚗'
+  const modeLabel = leg.mode === 'walking' ? 'walk' : 'drive'
+  return (
+    <div className={`leg-connector${leg.longLeg ? ' leg-connector--long' : ''}`}>
+      {leg.longLeg && (
+        <span className="leg-warning" title="Long transfer">
+          ⚠
+        </span>
+      )}
+      <span>
+        {icon} {leg.durationMinutes} min {modeLabel}
+        {leg.estimated ? ' (est.)' : ''}
+      </span>
+      <span className="leg-distance">{leg.distanceKm} km</span>
+    </div>
+  )
+}
+
+function StopCard({ stop }) {
+  return (
+    <div className={`stop-card${stop.unlocatable ? ' stop-card--unlocatable' : ''}`}>
+      <div className="stop-card-header">
+        <span className="stop-name">{stop.name}</span>
+        <StatusChip status={stop.status} />
+      </div>
+      <div className="stop-meta">
+        {stop.category && <span className="stop-chip">{stop.category}</span>}
+        {stop.timeOfDay && <span className="stop-chip">{stop.timeOfDay}</span>}
+        {stop.durationMinutes ? <span className="stop-chip">~{stop.durationMinutes} min</span> : null}
+      </div>
+      {stop.why && <p className="stop-why">{stop.why}</p>}
+      {stop.statusNote && <p className="stop-status-note">{stop.statusNote}</p>}
+      {stop.unlocatable && <p className="stop-unlocatable-note">Location not confirmed — shown without travel time</p>}
+    </div>
+  )
+}
+
+// Handles both itinerary shapes: legacy responses (or anything cached before
+// this change) may still have `activities: [string]` instead of `stops:
+// [object]` — checked right here via `day.stops` presence, so a mixed-shape
+// thread never crashes.
+function ItineraryDay({ day }) {
+  if (!day.stops) {
+    return (
+      <div className="itinerary-day">
+        <h4>
+          Day {day.day}: {day.title}
+        </h4>
+        <ul>
+          {(day.activities || []).map((a, i) => (
+            <li key={i}>{a}</li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  const legByFromIndex = new Map((day.legs || []).map((leg) => [leg.fromIndex, leg]))
+
+  return (
+    <div className="itinerary-day">
+      <h4>
+        Day {day.day}: {day.title}
+      </h4>
+      <div className="stop-list">
+        {day.stops.map((stop, i) => (
+          <div key={i}>
+            <StopCard stop={stop} />
+            {legByFromIndex.has(i) && <LegConnector leg={legByFromIndex.get(i)} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TurnAnswer({ result }) {
   return (
     <div className="result-details">
@@ -115,16 +200,7 @@ function TurnAnswer({ result }) {
         <div className="result-section">
           <h3>Itinerary</h3>
           {result.itinerary.map((day) => (
-            <div key={day.day} className="itinerary-day">
-              <h4>
-                Day {day.day}: {day.title}
-              </h4>
-              <ul>
-                {day.activities.map((a, i) => (
-                  <li key={i}>{a}</li>
-                ))}
-              </ul>
-            </div>
+            <ItineraryDay key={day.day} day={day} />
           ))}
         </div>
       )}

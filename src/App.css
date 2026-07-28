@@ -276,7 +276,124 @@
 .itinerary-day h4 {
   font-size: 15px;
   color: #fff;
-  margin: 0 0 4px;
+  margin: 0 0 8px;
+}
+
+.stop-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stop-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.stop-card--unlocatable {
+  border-style: dashed;
+}
+
+.stop-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stop-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.stop-chip {
+  font-size: 11px;
+  text-transform: capitalize;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.stop-why {
+  font-size: 14px;
+  color: rgba(242, 242, 245, 0.9);
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.stop-status-note {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 6px 0 0;
+  font-style: italic;
+}
+
+.stop-unlocatable-note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 6px 0 0;
+}
+
+.status-chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.status-chip--open {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.status-chip--closed {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.status-chip--seasonal {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.status-chip--unverified {
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+.leg-connector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 6px 4px 6px 20px;
+}
+
+.leg-connector--long {
+  color: #fbbf24;
+}
+
+.leg-warning {
+  font-size: 13px;
+}
+
+.leg-distance {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .result-sources a {

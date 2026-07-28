@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getVercelOidcToken } from '@vercel/oidc'
+import { enrichItinerary } from './_lib/itineraryGeo.js'
 
 // Routes through Vercel's AI Gateway using the project's auto-refreshed OIDC
 // token — no manual API key needed. If ANTHROPIC_API_KEY is ever set (e.g. to
@@ -37,9 +38,47 @@ const ITINERARY_SCHEMA = {
         properties: {
           day: { type: 'integer' },
           title: { type: 'string' },
-          activities: { type: 'array', items: { type: 'string' } },
+          stops: {
+            type: 'array',
+            description:
+              'Ordered stops for this day. Do NOT include latitude/longitude or any coordinates for any stop — you do not have reliable real-world coordinate knowledge and will produce plausible-looking but wrong values. Provide only the place name and city; coordinates are looked up server-side from those two fields.',
+            items: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string',
+                  description: 'The specific, real, searchable place name, e.g. "Fushimi Inari Taisha" — not a vague activity like "explore the area"',
+                },
+                city: {
+                  type: 'string',
+                  description: 'The city or town this place is in, e.g. "Kyoto" — required for accurate geocoding, never omit',
+                },
+                category: { type: 'string', description: 'Short category, e.g. temple, restaurant, museum, park, viewpoint, market' },
+                timeOfDay: { type: 'string', enum: ['morning', 'midday', 'afternoon', 'evening', 'night'] },
+                durationMinutes: { type: 'integer', description: 'Realistic time to spend here, in minutes' },
+                why: { type: 'string', description: 'One short sentence on why this stop, specific to this traveler’s question' },
+                status: {
+                  type: 'string',
+                  enum: ['open', 'closed', 'seasonal', 'unverified'],
+                  description:
+                    'This stop’s current operating status, based on what you actually found searching. Use "unverified" honestly whenever you could not confirm current status — never default to "open" as an assumption just because a place is well-known.',
+                },
+                statusNote: {
+                  type: 'string',
+                  description:
+                    'Brief note backing up the status, e.g. "closed for renovation until 2027", "seasonal, open June-August only", or "could not find current hours during search" when unverified.',
+                },
+                sourceUrl: {
+                  type: 'string',
+                  description: 'URL of the specific source used to verify this stop’s status, if you have one; empty string if none.',
+                },
+              },
+              required: ['name', 'city', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl'],
+              additionalProperties: false,
+            },
+          },
         },
-        required: ['day', 'title', 'activities'],
+        required: ['day', 'title', 'stops'],
         additionalProperties: false,
       },
     },
@@ -72,7 +111,10 @@ Before recommending or describing ANY specific named place (a landmark, museum, 
 
 If the traveler's question itself references a specific event, incident, or claim (e.g. "did X burn down", "is Y still open", "what happened to Z"), your top priority is verifying that exact claim via search and answering it directly and accurately — do not sidestep it with generic suggestions.
 
-Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary using only currently-open places. If no trip length is implied, return an empty itinerary array.
+Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary. If no trip length is implied, return an empty itinerary array.
+
+For every itinerary stop, put the verification work directly into that stop's "status" and "statusNote" fields — this is not just narrative for your answer text, it's structured data the app relies on. Mark a stop "open" only when you found current evidence it's operating, "closed" or "seasonal" when you found evidence of that, and "unverified" whenever you could not confirm current status via search — never default to "open" as a convenient assumption just because a place is famous or you're confident from memory. Do not include a stop's coordinates; the app geocodes each stop server-side from its name and city.
+
 List the real sources you used in "sources", including whatever you used to verify current status.
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.
 This may be an ongoing conversation — if earlier turns are included, treat the new question as a follow-up (e.g. still about the same destination or trip) unless the traveler clearly changes topic, and don't repeat details already covered.`
@@ -108,7 +150,10 @@ export default async function handler(req, res) {
       // newer web_search_20260209 dynamic-filtering tool, so this uses the
       // plain web_search_20250305 variant instead.
       model: 'claude-haiku-4-5',
-      max_tokens: 4096,
+      // Bumped from 4096 after the itinerary schema grew (stops are now rich
+      // objects with status/statusNote/sourceUrl per stop instead of plain
+      // strings) — 4096 truncated mid-JSON on a 5-day itinerary.
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
       output_config: {
@@ -130,7 +175,19 @@ export default async function handler(req, res) {
     const textBlock = [...response.content].reverse().find((b) => b.type === 'text')
     if (!textBlock) throw new Error(`No text response from model (stop_reason: ${response.stop_reason})`)
 
-    res.status(200).json(JSON.parse(textBlock.text))
+    const parsed = JSON.parse(textBlock.text)
+
+    if (parsed.itinerary?.length > 0) {
+      try {
+        parsed.itinerary = await enrichItinerary(parsed.itinerary)
+      } catch (geoErr) {
+        // Geocoding/coherence failure shouldn't take down the whole answer —
+        // fall back to the model's ungeocoded itinerary (no coordinates, no legs).
+        console.error('itinerary geo-enrichment failed, serving ungeocoded itinerary:', geoErr)
+      }
+    }
+
+    res.status(200).json(parsed)
   } catch (err) {
     console.error('travel-assistant error:', err)
     res.status(502).json({ error: 'Failed to generate travel answer' })
