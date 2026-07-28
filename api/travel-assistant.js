@@ -47,11 +47,23 @@ const ITINERARY_SCHEMA = {
               properties: {
                 name: {
                   type: 'string',
-                  description: 'The specific, real, searchable place name, e.g. "Fushimi Inari Taisha" — not a vague activity like "explore the area"',
+                  description:
+                    'The traveler-facing display name — can include a short clarifying qualifier, e.g. "Catedral de Santiago (Santiago Cathedral)" — this is what gets shown in the UI, not what gets geocoded.',
+                },
+                searchName: {
+                  type: 'string',
+                  description:
+                    'The official, local-language name you would actually type into a map to find this exact place — no English translation, no parenthetical, no descriptive suffix. E.g. name "Santa Catalina Arch" -> searchName "Arco de Santa Catalina"; name "Tenryu-ji Temple" -> searchName "天龍寺" or "Tenryu-ji" (whichever a local map search would actually match). If name is already the local official name with no qualifiers, repeat it here unchanged.',
                 },
                 city: {
                   type: 'string',
                   description: 'The city or town this place is in, e.g. "Kyoto" — required for accurate geocoding, never omit',
+                },
+                proximity: {
+                  type: 'string',
+                  enum: ['in-city', 'day-trip'],
+                  description:
+                    'Whether this stop is inside the destination city/town itself ("in-city") or a legitimate excursion outside it — a volcano hike, a lake, a nearby coastal or countryside trip ("day-trip"). This controls how far from the city center a match is allowed to be, so get it right: marking a genuine day-trip as "in-city" can cause it to be wrongly rejected as too far away.',
                 },
                 category: { type: 'string', description: 'Short category, e.g. temple, restaurant, museum, park, viewpoint, market' },
                 timeOfDay: { type: 'string', enum: ['morning', 'midday', 'afternoon', 'evening', 'night'] },
@@ -73,7 +85,7 @@ const ITINERARY_SCHEMA = {
                   description: 'URL of the specific source used to verify this stop’s status, if you have one; empty string if none.',
                 },
               },
-              required: ['name', 'city', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl'],
+              required: ['name', 'searchName', 'city', 'proximity', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl'],
               additionalProperties: false,
             },
           },
@@ -113,7 +125,11 @@ If the traveler's question itself references a specific event, incident, or clai
 
 Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary. If no trip length is implied, return an empty itinerary array.
 
-For every itinerary stop, put the verification work directly into that stop's "status" and "statusNote" fields — this is not just narrative for your answer text, it's structured data the app relies on. Mark a stop "open" only when you found current evidence it's operating, "closed" or "seasonal" when you found evidence of that, and "unverified" whenever you could not confirm current status via search — never default to "open" as a convenient assumption just because a place is famous or you're confident from memory. Do not include a stop's coordinates; the app geocodes each stop server-side from its name and city.
+For every itinerary stop, put the verification work directly into that stop's "status" and "statusNote" fields — this is not just narrative for your answer text, it's structured data the app relies on. Mark a stop "open" only when you found current evidence it's operating, "closed" or "seasonal" when you found evidence of that, and "unverified" whenever you could not confirm current status via search — never default to "open" as a convenient assumption just because a place is famous or you're confident from memory. Do not include a stop's coordinates; the app geocodes each stop server-side from its "searchName" and city.
+
+"name" and "searchName" serve different jobs — do not conflate them. "name" is what the traveler reads and can carry a clarifying qualifier ("Catedral de Santiago (Santiago Cathedral)"). "searchName" is only ever fed to a map search, so it must be the bare official/local-language name with nothing else attached — no parentheses, no "aka", no English translation tacked on, no descriptive suffix like "- Parish & Ruins". An English name for a place that locals and maps refer to by a different name is the single most common way a search fails outright: default to the local-language name in "searchName" whenever the place is not itself an English-named place, even if "name" stays in English for the traveler.
+
+Set "proximity" honestly per stop: "in-city" for anything inside the destination town/city itself, "day-trip" for a genuine excursion outside it (a volcano hike, a lake, a nearby countryside or coastal trip). This is load-bearing, not decorative — it controls how far from the city center a match is allowed to be before the app rejects it as wrong. Marking a real day trip as "in-city" will cause the app to throw out a correct result as "too far away."
 
 List the real sources you used in "sources", including whatever you used to verify current status.
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.
