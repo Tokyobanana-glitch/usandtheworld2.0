@@ -57,13 +57,18 @@ const ITINERARY_SCHEMA = {
                 },
                 city: {
                   type: 'string',
-                  description: 'The city or town this place is in, e.g. "Kyoto" — required for accurate geocoding, never omit',
+                  description: 'The city or town the TRIP is based in, e.g. "Kyoto" — this stays the same for every stop in the trip, even day trips out of it. Required for accurate geocoding, never omit.',
                 },
                 proximity: {
                   type: 'string',
                   enum: ['in-city', 'day-trip'],
                   description:
                     'Whether this stop is inside the destination city/town itself ("in-city") or a legitimate excursion outside it — a volcano hike, a lake, a nearby coastal or countryside trip ("day-trip"). This controls how far from the city center a match is allowed to be, so get it right: marking a genuine day-trip as "in-city" can cause it to be wrongly rejected as too far away.',
+                },
+                locality: {
+                  type: 'string',
+                  description:
+                    'The actual town or city this specific stop is physically located in — NOT the trip\'s base city when they differ. For an in-city stop, this is identical to "city". For a day-trip stop, this is the real place, e.g. a trip based in Kyoto that includes Todai-ji has city="Kyoto" but locality="Nara", because that is where Todai-ji actually is. You know this even when the trip base city doesn\'t change — use that knowledge; do not just repeat "city" for day-trip stops.',
                 },
                 category: { type: 'string', description: 'Short category, e.g. temple, restaurant, museum, park, viewpoint, market' },
                 timeOfDay: { type: 'string', enum: ['morning', 'midday', 'afternoon', 'evening', 'night'] },
@@ -85,7 +90,7 @@ const ITINERARY_SCHEMA = {
                   description: 'URL of the specific source used to verify this stop’s status, if you have one; empty string if none.',
                 },
               },
-              required: ['name', 'searchName', 'city', 'proximity', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl'],
+              required: ['name', 'searchName', 'city', 'proximity', 'locality', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl'],
               additionalProperties: false,
             },
           },
@@ -130,6 +135,8 @@ For every itinerary stop, put the verification work directly into that stop's "s
 "name" and "searchName" serve different jobs — do not conflate them. "name" is what the traveler reads and can carry a clarifying qualifier ("Catedral de Santiago (Santiago Cathedral)"). "searchName" is only ever fed to a map search, so it must be the bare official/local-language name with nothing else attached — no parentheses, no "aka", no English translation tacked on, no descriptive suffix like "- Parish & Ruins". An English name for a place that locals and maps refer to by a different name is the single most common way a search fails outright: default to the local-language name in "searchName" whenever the place is not itself an English-named place, even if "name" stays in English for the traveler.
 
 Set "proximity" honestly per stop: "in-city" for anything inside the destination town/city itself, "day-trip" for a genuine excursion outside it (a volcano hike, a lake, a nearby countryside or coastal trip). This is load-bearing, not decorative — it controls how far from the city center a match is allowed to be before the app rejects it as wrong. Marking a real day trip as "in-city" will cause the app to throw out a correct result as "too far away."
+
+Set "locality" to the actual town/city the stop physically sits in — for an in-city stop this is always the same as "city"; for a day-trip stop it is usually a DIFFERENT, specific place, and you already know what it is (a trip based in Kyoto that visits Todai-ji has city="Kyoto" but locality="Nara", because that's where Todai-ji actually is — never just repeat "city" for a day-trip stop out of laziness). This is also load-bearing: it's how the app confirms a day-trip match landed in the right town instead of a same-named place somewhere else entirely.
 
 List the real sources you used in "sources", including whatever you used to verify current status.
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.

@@ -32,52 +32,52 @@ const DAY_TRIP_DRIFT_FLAG_KM = 10
 
 const FIXTURE = [
   // --- Latin America (Guatemala) ---
-  { region: 'Latin America', name: 'Arco de Santa Catalina', searchName: 'Arco de Santa Catalina', city: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5596, lng: -90.7343 },
-  { region: 'Latin America', name: 'Iglesia de la Merced', searchName: 'Iglesia de la Merced', city: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5611, lng: -90.7348 },
-  { region: 'Latin America', name: 'Parque Central', searchName: 'Parque Central', city: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5569, lng: -90.7337 }, // generic name
-  { region: 'Latin America', name: 'Mercado de Artesanías', searchName: 'Mercado de Artesanías', city: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5599, lng: -90.7395 }, // generic-ish name
-  { region: 'Latin America', name: 'Pacaya Volcano', searchName: 'Volcán de Pacaya', city: 'Antigua Guatemala', proximity: 'day-trip', lat: 14.3810, lng: -90.6009 }, // legit ~50km day trip
+  { region: 'Latin America', name: 'Arco de Santa Catalina', searchName: 'Arco de Santa Catalina', city: 'Antigua Guatemala', locality: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5596, lng: -90.7343 },
+  { region: 'Latin America', name: 'Iglesia de la Merced', searchName: 'Iglesia de la Merced', city: 'Antigua Guatemala', locality: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5611, lng: -90.7348 },
+  { region: 'Latin America', name: 'Parque Central', searchName: 'Parque Central', city: 'Antigua Guatemala', locality: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5569, lng: -90.7337 }, // generic name
+  { region: 'Latin America', name: 'Mercado de Artesanías', searchName: 'Mercado de Artesanías', city: 'Antigua Guatemala', locality: 'Antigua Guatemala', proximity: 'in-city', lat: 14.5599, lng: -90.7395 }, // generic-ish name
+  { region: 'Latin America', name: 'Pacaya Volcano', searchName: 'Volcán de Pacaya', city: 'Antigua Guatemala', locality: 'San Vicente Pacaya', proximity: 'day-trip', lat: 14.3810, lng: -90.6009 }, // legit ~50km day trip, real locality differs
 
   // --- Japan (Kyoto) — local-language divergence + known coverage gap ---
-  { region: 'Japan', name: 'Fushimi Inari Shrine', searchName: 'Fushimi Inari Taisha', city: 'Kyoto', proximity: 'in-city', lat: 34.9671, lng: 135.7727 },
-  { region: 'Japan', name: 'Golden Pavilion', searchName: '金閣寺', city: 'Kyoto', proximity: 'in-city', lat: 35.0394, lng: 135.7292 },
-  { region: 'Japan', name: 'Kiyomizu Temple', searchName: '清水寺', city: 'Kyoto', proximity: 'in-city', lat: 34.9949, lng: 135.7850 },
-  { region: 'Japan', name: 'Arashiyama Bamboo Grove', searchName: '嵐山竹林の道', city: 'Kyoto', proximity: 'in-city', lat: 35.0094, lng: 135.6693 },
-  { region: 'Japan', name: 'Todai-ji Temple (Nara day trip)', searchName: '東大寺', city: 'Kyoto', proximity: 'day-trip', lat: 34.6890, lng: 135.8398 }, // legit ~40km day trip
+  { region: 'Japan', name: 'Fushimi Inari Shrine', searchName: 'Fushimi Inari Taisha', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 34.9671, lng: 135.7727 },
+  { region: 'Japan', name: 'Golden Pavilion', searchName: '金閣寺', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 35.0394, lng: 135.7292 },
+  { region: 'Japan', name: 'Kiyomizu Temple', searchName: '清水寺', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 34.9949, lng: 135.7850 },
+  { region: 'Japan', name: 'Arashiyama Bamboo Grove', searchName: '嵐山竹林の道', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 35.0094, lng: 135.6693 },
+  { region: 'Japan', name: 'Todai-ji Temple (Nara day trip)', searchName: '東大寺', city: 'Kyoto', locality: 'Nara', proximity: 'day-trip', lat: 34.6890, lng: 135.8398 }, // legit ~40km day trip, real locality differs — this is the Todai-ji test case
 
   // --- Europe (Rome) ---
-  { region: 'Europe', name: 'Colosseum', searchName: 'Colosseo', city: 'Rome', proximity: 'in-city', lat: 41.8902, lng: 12.4922 },
-  { region: 'Europe', name: 'Trevi Fountain', searchName: 'Fontana di Trevi', city: 'Rome', proximity: 'in-city', lat: 41.9009, lng: 12.4833 },
-  { region: 'Europe', name: 'Piazza Navona', searchName: 'Piazza Navona', city: 'Rome', proximity: 'in-city', lat: 41.8992, lng: 12.4731 },
-  { region: 'Europe', name: 'Vatican Museums', searchName: 'Musei Vaticani', city: 'Rome', proximity: 'in-city', lat: 41.9065, lng: 12.4536 },
-  { region: 'Europe', name: 'Villa d’Este (Tivoli day trip)', searchName: 'Villa d’Este Tivoli', city: 'Rome', proximity: 'day-trip', lat: 41.9629, lng: 12.7955 }, // legit ~30km day trip
+  { region: 'Europe', name: 'Colosseum', searchName: 'Colosseo', city: 'Rome', locality: 'Rome', proximity: 'in-city', lat: 41.8902, lng: 12.4922 },
+  { region: 'Europe', name: 'Trevi Fountain', searchName: 'Fontana di Trevi', city: 'Rome', locality: 'Rome', proximity: 'in-city', lat: 41.9009, lng: 12.4833 },
+  { region: 'Europe', name: 'Piazza Navona', searchName: 'Piazza Navona', city: 'Rome', locality: 'Rome', proximity: 'in-city', lat: 41.8992, lng: 12.4731 },
+  { region: 'Europe', name: 'Vatican Museums', searchName: 'Musei Vaticani', city: 'Rome', locality: 'Rome', proximity: 'in-city', lat: 41.9065, lng: 12.4536 },
+  { region: 'Europe', name: 'Villa d’Este (Tivoli day trip)', searchName: 'Villa d’Este Tivoli', city: 'Rome', locality: 'Tivoli', proximity: 'day-trip', lat: 41.9629, lng: 12.7955 }, // legit ~30km day trip, real locality differs
 
   // --- Europe: generic names, different country each ---
-  { region: 'Europe', name: 'Plaza Mayor', searchName: 'Plaza Mayor', city: 'Madrid', proximity: 'in-city', lat: 40.4155, lng: -3.7074 }, // generic name
-  { region: 'Europe', name: 'Old Town Square', searchName: 'Staroměstské náměstí', city: 'Prague', proximity: 'in-city', lat: 50.0870, lng: 14.4207 }, // generic pattern
+  { region: 'Europe', name: 'Plaza Mayor', searchName: 'Plaza Mayor', city: 'Madrid', locality: 'Madrid', proximity: 'in-city', lat: 40.4155, lng: -3.7074 }, // generic name
+  { region: 'Europe', name: 'Old Town Square', searchName: 'Staroměstské náměstí', city: 'Prague', locality: 'Prague', proximity: 'in-city', lat: 50.0870, lng: 14.4207 }, // generic pattern
 
   // --- Europe: exonym divergence (Istanbul) ---
-  { region: 'Europe', name: 'Hagia Sophia', searchName: 'Ayasofya', city: 'Istanbul', proximity: 'in-city', lat: 41.0086, lng: 28.9802 },
-  { region: 'Europe', name: 'Blue Mosque', searchName: 'Sultan Ahmet Camii', city: 'Istanbul', proximity: 'in-city', lat: 41.0054, lng: 28.9768 },
+  { region: 'Europe', name: 'Hagia Sophia', searchName: 'Ayasofya', city: 'Istanbul', locality: 'Istanbul', proximity: 'in-city', lat: 41.0086, lng: 28.9802 },
+  { region: 'Europe', name: 'Blue Mosque', searchName: 'Sultan Ahmet Camii', city: 'Istanbul', locality: 'Istanbul', proximity: 'in-city', lat: 41.0054, lng: 28.9768 },
 
   // --- Southeast Asia (Bangkok) ---
-  { region: 'Southeast Asia', name: 'Wat Arun', searchName: 'Wat Arun', city: 'Bangkok', proximity: 'in-city', lat: 13.7437, lng: 100.4888 },
-  { region: 'Southeast Asia', name: 'Temple of the Emerald Buddha', searchName: 'Wat Phra Kaew', city: 'Bangkok', proximity: 'in-city', lat: 13.7515, lng: 100.4927 },
-  { region: 'Southeast Asia', name: 'Chatuchak Weekend Market', searchName: 'Chatuchak Market', city: 'Bangkok', proximity: 'in-city', lat: 13.7998, lng: 100.5501 },
-  { region: 'Southeast Asia', name: 'Ayutthaya Historical Park', searchName: 'Ayutthaya Historical Park', city: 'Bangkok', proximity: 'day-trip', lat: 14.3533, lng: 100.5684 }, // legit ~80km day trip
+  { region: 'Southeast Asia', name: 'Wat Arun', searchName: 'Wat Arun', city: 'Bangkok', locality: 'Bangkok', proximity: 'in-city', lat: 13.7437, lng: 100.4888 },
+  { region: 'Southeast Asia', name: 'Temple of the Emerald Buddha', searchName: 'Wat Phra Kaew', city: 'Bangkok', locality: 'Bangkok', proximity: 'in-city', lat: 13.7515, lng: 100.4927 },
+  { region: 'Southeast Asia', name: 'Chatuchak Weekend Market', searchName: 'Chatuchak Market', city: 'Bangkok', locality: 'Bangkok', proximity: 'in-city', lat: 13.7998, lng: 100.5501 },
+  { region: 'Southeast Asia', name: 'Ayutthaya Historical Park', searchName: 'Ayutthaya Historical Park', city: 'Bangkok', locality: 'Ayutthaya', proximity: 'day-trip', lat: 14.3533, lng: 100.5684 }, // legit ~80km day trip, real locality differs
 
   // --- Southeast Asia (Bali) ---
-  { region: 'Southeast Asia', name: 'Uluwatu Temple (day trip)', searchName: 'Pura Luhur Uluwatu', city: 'Kuta, Bali', proximity: 'day-trip', lat: -8.8291, lng: 115.0849 },
-  { region: 'Southeast Asia', name: 'Tegallalang Rice Terraces', searchName: 'Tegallalang Rice Terrace', city: 'Ubud, Bali', proximity: 'day-trip', lat: -8.4312, lng: 115.2778 },
+  { region: 'Southeast Asia', name: 'Uluwatu Temple (day trip)', searchName: 'Pura Luhur Uluwatu', city: 'Kuta, Bali', locality: 'Uluwatu, Bali', proximity: 'day-trip', lat: -8.8291, lng: 115.0849 },
+  { region: 'Southeast Asia', name: 'Tegallalang Rice Terraces', searchName: 'Tegallalang Rice Terrace', city: 'Ubud, Bali', locality: 'Tegallalang, Bali', proximity: 'day-trip', lat: -8.4312, lng: 115.2778 },
 
   // --- US (San Francisco) ---
-  { region: 'US', name: 'Golden Gate Bridge', searchName: 'Golden Gate Bridge', city: 'San Francisco', proximity: 'in-city', lat: 37.8199, lng: -122.4783 },
-  { region: 'US', name: 'Alcatraz Island', searchName: 'Alcatraz Island', city: 'San Francisco', proximity: 'in-city', lat: 37.8267, lng: -122.4230 },
-  { region: 'US', name: "Fisherman's Wharf", searchName: "Fisherman's Wharf", city: 'San Francisco', proximity: 'in-city', lat: 37.8080, lng: -122.4177 },
-  { region: 'US', name: 'Muir Woods (day trip)', searchName: 'Muir Woods National Monument', city: 'San Francisco', proximity: 'day-trip', lat: 37.8946, lng: -122.5811 }, // legit ~20km day trip
+  { region: 'US', name: 'Golden Gate Bridge', searchName: 'Golden Gate Bridge', city: 'San Francisco', locality: 'San Francisco', proximity: 'in-city', lat: 37.8199, lng: -122.4783 },
+  { region: 'US', name: 'Alcatraz Island', searchName: 'Alcatraz Island', city: 'San Francisco', locality: 'San Francisco', proximity: 'in-city', lat: 37.8267, lng: -122.4230 },
+  { region: 'US', name: "Fisherman's Wharf", searchName: "Fisherman's Wharf", city: 'San Francisco', locality: 'San Francisco', proximity: 'in-city', lat: 37.8080, lng: -122.4177 },
+  { region: 'US', name: 'Muir Woods (day trip)', searchName: 'Muir Woods National Monument', city: 'San Francisco', locality: 'Mill Valley', proximity: 'day-trip', lat: 37.8946, lng: -122.5811 }, // legit ~20km day trip, real locality differs
 
   // --- Latin America (rural small-town control) ---
-  { region: 'Latin America', name: 'San Juan La Laguna Public Dock', searchName: 'San Juan La Laguna Public Dock', city: 'San Juan La Laguna', proximity: 'in-city', lat: 14.6906, lng: -91.2836 },
+  { region: 'Latin America', name: 'San Juan La Laguna Public Dock', searchName: 'San Juan La Laguna Public Dock', city: 'San Juan La Laguna', locality: 'San Juan La Laguna', proximity: 'in-city', lat: 14.6906, lng: -91.2836 },
 ]
 
 function haversineKm(a, b) {
