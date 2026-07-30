@@ -172,6 +172,38 @@
   color: #ffb4b4;
 }
 
+.result-empty {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.result-empty p {
+  color: #fbbf24;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.result-empty-retry {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.result-empty-retry:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.result-empty-retry:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .followups {
   display: flex;
   flex-wrap: wrap;

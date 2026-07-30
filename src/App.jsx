@@ -79,6 +79,16 @@ function buildLoadingPhrases(rawQuery) {
   ]
 }
 
+// A technically-successful response with nothing in it — no answer text, no
+// itinerary — is a silent failure this app should never render as if
+// everything worked. Seen live: a "done" turn with no visible content at
+// all, no error message, nothing to explain it.
+function isEmptyResult(result) {
+  const hasAnswer = Boolean(result?.answer?.trim())
+  const hasItinerary = result?.itinerary?.length > 0
+  return !hasAnswer && !hasItinerary
+}
+
 function SearchIcon() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -392,18 +402,18 @@ function App() {
     return () => clearInterval(id)
   }, [submitting, loadingPhrases])
 
-  async function runSearch(rawQuery) {
+  async function runSearch(rawQuery, { bypassCache = false, retryId = null } = {}) {
     const q = rawQuery.trim()
     if (!q || submitting) return
 
-    const id = `${Date.now()}-${Math.random()}`
+    const id = retryId ?? `${Date.now()}-${Math.random()}`
     const priorTurns = thread.filter((t) => t.status === 'done')
 
     setSubmitting(true)
     setQuery('')
     setLoadingPhrases(buildLoadingPhrases(q))
     setLoadingPhraseIndex(0)
-    setThread((prev) => [...prev, { id, query: q, status: 'loading' }])
+    setThread((prev) => (retryId ? prev.map((t) => (t.id === id ? { ...t, status: 'loading' } : t)) : [...prev, { id, query: q, status: 'loading' }]))
 
     const history = priorTurns.flatMap((t) => [
       { role: 'user', content: t.query },
@@ -411,7 +421,16 @@ function App() {
     ])
 
     try {
-      const result = await askTravelAssistant(q, { history })
+      const result = await askTravelAssistant(q, { history, bypassCache })
+      // A "done" response with no actual content (no answer, no itinerary) is
+      // a silent failure — the underlying request technically succeeded but
+      // produced nothing worth showing. Surfacing that plainly, with a way
+      // to retry that skips the client-side cache, beats rendering a blank
+      // result card with no indication anything went wrong.
+      if (isEmptyResult(result)) {
+        setThread((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'empty' } : t)))
+        return
+      }
       setThread((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'done', result } : t)))
       if (result.slug) addRecentTrip({ slug: result.slug, destination: result.destination, query: q })
     } catch (error) {
@@ -421,6 +440,10 @@ function App() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function retrySearch(turn) {
+    runSearch(turn.query, { bypassCache: true, retryId: turn.id })
   }
 
   function handleSearch(event) {
@@ -490,6 +513,14 @@ function App() {
                   </p>
                 )}
                 {turn.status === 'error' && <p className="result-error">{turn.message}</p>}
+                {turn.status === 'empty' && (
+                  <div className="result-empty">
+                    <p>That didn't come back with anything — not an error, just an empty answer. Worth trying again.</p>
+                    <button type="button" className="result-empty-retry" onClick={() => retrySearch(turn)} disabled={submitting}>
+                      Try again
+                    </button>
+                  </div>
+                )}
                 {turn.status === 'done' && turn.result && <TurnAnswer result={turn.result} />}
               </div>
             ))}
