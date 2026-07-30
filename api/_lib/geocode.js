@@ -22,6 +22,7 @@
 // aren't drawing on the community-good-faith public Nominatim/Photon
 // instances (both capped at ~1req/s with ban risk for exceeding it).
 import { haversineKm } from './geoMath.js'
+import { getSupabase } from './supabase.js'
 
 // Module-level caches: survive for the lifetime of a warm function instance,
 // reset on cold start. Fine for now — persistence is a later phase.
@@ -364,7 +365,11 @@ async function wikidataForward(searchName, name, cityInfo) {
 
 async function geoapifyForward(query, proximity) {
   const key = process.env.GEOAPIFY_API_KEY
-  if (!key) return { candidate: null, rateLimited: false }
+  // Dormant until a key is configured — no fetch, no cache write, no log
+  // noise on every miss. `skipped` (vs. an actual no-candidate result) lets
+  // the caller leave this tier out of the "attempted" trail entirely rather
+  // than falsely implying it was tried.
+  if (!key) return { candidate: null, rateLimited: false, skipped: true }
 
   const cacheKey = normalizeKey(`${query}|${proximity ? `${proximity.lat},${proximity.lng}` : ''}`)
   if (GEOAPIFY_QUERY_CACHE.has(cacheKey)) return GEOAPIFY_QUERY_CACHE.get(cacheKey)
@@ -606,7 +611,8 @@ async function tryWikidata(name, searchName, ctx, wikidataBudget) {
 
 async function tryGeoapify(name, searchName, city, ctx) {
   const query = `${searchName || name}, ${city}`
-  const { candidate, rateLimited } = await geoapifyForward(query, ctx.cityCenter)
+  const { candidate, rateLimited, skipped } = await geoapifyForward(query, ctx.cityCenter)
+  if (skipped) return { winner: null, attempted: [], rateLimited: false }
   if (!candidate) return { winner: null, attempted: ['geoapify:search'], rateLimited }
   const verdict = await evaluateCandidate(candidate, ctx)
   if (verdict.accept) return { winner: { candidate, provider: 'geoapify', wonBy: 'search' }, attempted: ['geoapify:search'], rateLimited }
@@ -614,11 +620,55 @@ async function tryGeoapify(name, searchName, city, ctx) {
   return { winner: null, attempted: ['geoapify:search'], rateLimited }
 }
 
+// Persistent, cross-request, cross-user geocode cache — place identity is
+// shared across every itinerary ever generated, so a landmark is resolved
+// once, globally, forever, instead of once per warm serverless instance
+// (which is what the module-level MAPBOX_QUERY_CACHE/etc. above give you —
+// effectively cold most of the time, which is exactly why a 50s worst case
+// was reachable). Keyed on searchName + the anchor place actually validated
+// against (locality for a day-trip stop, city otherwise) + country code —
+// NOT on the raw query string, since this caches "this place, resolved",
+// not "this exact provider request".
+function geocodeCacheKey(searchName, name, targetCityName, countryCode) {
+  return normalizeKey(`${searchName || name}|${targetCityName}|${countryCode || 'unknown'}`)
+}
+
+async function getPersistentGeocode(cacheKey) {
+  const supabase = getSupabase()
+  if (!supabase) return null
+  const { data, error } = await supabase.from('geocode_cache').select('lat,lng,provider,rung').eq('cache_key', cacheKey).maybeSingle()
+  if (error) {
+    console.error('geocode_cache read error', cacheKey, error.message)
+    return null
+  }
+  return data
+}
+
+async function savePersistentGeocode(cacheKey, { lat, lng, provider, rung }) {
+  const supabase = getSupabase()
+  if (!supabase) return
+  const { error } = await supabase
+    .from('geocode_cache')
+    .upsert({ cache_key: cacheKey, lat, lng, provider, rung, resolved_at: new Date().toISOString() }, { onConflict: 'cache_key' })
+  if (error) console.error('geocode_cache write error', cacheKey, error.message)
+}
+
 async function geocodeOne(stop, cityInfo, wikidataBudget) {
   const { name, city, searchName } = stop
   const normalizedName = normalizeSearchName(name)
   const rungs = buildRungs(name, searchName, city, normalizedName)
   const ctx = await resolveValidationAnchor(stop, cityInfo)
+
+  const cacheKey = geocodeCacheKey(searchName, name, ctx.targetCityName, ctx.targetCountryCode)
+  const persisted = await getPersistentGeocode(cacheKey)
+  if (persisted) {
+    console.log(`geocode resolved "${name}, ${city}" via db-cache (${persisted.provider}:${persisted.rung})`)
+    return {
+      winner: { candidate: { lat: persisted.lat, lng: persisted.lng }, provider: persisted.provider, wonBy: `cached:${persisted.rung}` },
+      attempted: ['db-cache'],
+      rateLimited: false,
+    }
+  }
 
   const providerOrder = PROVIDER_ROUTING[ctx.targetCountryCode] ?? DEFAULT_PROVIDER_ORDER
 
@@ -642,6 +692,7 @@ async function geocodeOne(stop, cityInfo, wikidataBudget) {
 
   if (winner) {
     console.log(`geocode resolved "${name}, ${city}" via ${winner.provider}:${winner.wonBy} (attempted: ${attempted.join(', ')})`)
+    await savePersistentGeocode(cacheKey, { lat: winner.candidate.lat, lng: winner.candidate.lng, provider: winner.provider, rung: winner.wonBy })
   } else {
     console.log(`geocode exhausted all providers for "${name}, ${city}" (attempted: ${attempted.join(', ')}${anyRateLimited ? ', RATE-LIMITED' : ''})`)
   }

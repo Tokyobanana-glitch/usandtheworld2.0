@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/trip/:slug", "destination": "/api/trip-page?slug=:slug" }
+  ]
+}

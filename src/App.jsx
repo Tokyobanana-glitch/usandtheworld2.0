@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { askTravelAssistant } from './services/travelAssistant'
+import { addRecentTrip } from './services/recentTrips'
+import RecentTrips from './RecentTrips'
 import './App.css'
 
 const TYPEWRITER_DESTINATIONS = [
@@ -88,12 +90,12 @@ function ClearIcon() {
 
 const STATUS_LABELS = { open: 'Open', closed: 'Closed', seasonal: 'Seasonal', unverified: 'Unverified' }
 
-function StatusChip({ status }) {
+export function StatusChip({ status }) {
   const key = STATUS_LABELS[status] ? status : 'unverified'
   return <span className={`status-chip status-chip--${key}`}>{STATUS_LABELS[key]}</span>
 }
 
-function LegConnector({ leg }) {
+export function LegConnector({ leg }) {
   if (!leg) return null
   const icon = leg.mode === 'walking' ? '🚶' : '🚗'
   const modeLabel = leg.mode === 'walking' ? 'walk' : 'drive'
@@ -113,7 +115,7 @@ function LegConnector({ leg }) {
   )
 }
 
-function StopCard({ stop }) {
+export function StopCard({ stop }) {
   return (
     <div className={`stop-card${stop.unlocatable ? ' stop-card--unlocatable' : ''}`}>
       <div className="stop-card-header">
@@ -136,7 +138,7 @@ function StopCard({ stop }) {
 // this change) may still have `activities: [string]` instead of `stops:
 // [object]` — checked right here via `day.stops` presence, so a mixed-shape
 // thread never crashes.
-function ItineraryDay({ day }) {
+export function ItineraryDay({ day }) {
   if (!day.stops) {
     return (
       <div className="itinerary-day">
@@ -171,11 +173,17 @@ function ItineraryDay({ day }) {
   )
 }
 
-function TurnAnswer({ result }) {
+export function TurnAnswer({ result }) {
   return (
     <div className="result-details">
       <h2>{result.destination}</h2>
       <p className="result-answer">{result.answer}</p>
+
+      {result.slug && result.itinerary?.length > 0 && (
+        <a className="share-trip-link" href={`/trip/${result.slug}`}>
+          Share this trip →
+        </a>
+      )}
 
       {result.bestTimeToVisit && (
         <p className="result-best-time">
@@ -320,6 +328,7 @@ function App() {
     try {
       const result = await askTravelAssistant(q, { history })
       setThread((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'done', result } : t)))
+      if (result.slug) addRecentTrip({ slug: result.slug, destination: result.destination, query: q })
     } catch (error) {
       setThread((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: 'error', message: error.message || 'Something went wrong.' } : t)),
@@ -379,7 +388,10 @@ function App() {
         </form>
 
         {thread.length === 0 && (
-          <p className="tagline">Discover your next adventure and share it with Usandtheworld.</p>
+          <>
+            <p className="tagline">Discover your next adventure and share it with Usandtheworld.</p>
+            <RecentTrips />
+          </>
         )}
 
         {thread.length > 0 && (
