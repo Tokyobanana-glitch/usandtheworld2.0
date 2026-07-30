@@ -70,6 +70,11 @@ const ITINERARY_SCHEMA = {
                   description:
                     'The actual town or city this specific stop is physically located in — NOT the trip\'s base city when they differ. For an in-city stop, this is identical to "city". For a day-trip stop, this is the real place, e.g. a trip based in Kyoto that includes Todai-ji has city="Kyoto" but locality="Nara", because that is where Todai-ji actually is. You know this even when the trip base city doesn\'t change — use that knowledge; do not just repeat "city" for day-trip stops.',
                 },
+                country: {
+                  type: 'string',
+                  description:
+                    'The country "locality" is actually in, e.g. "Japan" — not a code, the plain country name. This disambiguates a city/town name that exists in multiple countries (there is more than one "Valencia", more than one "Santiago", more than one "San José") from an unrelated same-named place elsewhere in the world. Almost always the same as the trip\'s overall destination country, but follow "locality" if a day-trip stop is ever in a genuinely different country.',
+                },
                 category: { type: 'string', description: 'Short category, e.g. temple, restaurant, museum, park, viewpoint, market' },
                 timeOfDay: { type: 'string', enum: ['morning', 'midday', 'afternoon', 'evening', 'night'] },
                 durationMinutes: { type: 'integer', description: 'Realistic time to spend here, in minutes' },
@@ -95,7 +100,7 @@ const ITINERARY_SCHEMA = {
                     'Rough entry/visit cost if you found one during search, in the local format you found it, e.g. "€8", "$15", "Free". Empty string if you found no pricing information — do not guess or estimate one.',
                 },
               },
-              required: ['name', 'searchName', 'city', 'proximity', 'locality', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl', 'priceIndicator'],
+              required: ['name', 'searchName', 'city', 'proximity', 'locality', 'country', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl', 'priceIndicator'],
               additionalProperties: false,
             },
           },
@@ -144,6 +149,8 @@ Always cite a real "sourceUrl" for a stop's status when you have one — the app
 Set "proximity" honestly per stop: "in-city" for anything inside the destination town/city itself, "day-trip" for a genuine excursion outside it (a volcano hike, a lake, a nearby countryside or coastal trip). This is load-bearing, not decorative — it controls how far from the city center a match is allowed to be before the app rejects it as wrong. Marking a real day trip as "in-city" will cause the app to throw out a correct result as "too far away."
 
 Set "locality" to the actual town/city the stop physically sits in — for an in-city stop this is always the same as "city"; for a day-trip stop it is usually a DIFFERENT, specific place, and you already know what it is (a trip based in Kyoto that visits Todai-ji has city="Kyoto" but locality="Nara", because that's where Todai-ji actually is — never just repeat "city" for a day-trip stop out of laziness). This is also load-bearing: it's how the app confirms a day-trip match landed in the right town instead of a same-named place somewhere else entirely.
+
+Set "country" to the plain country name "locality" is actually in, e.g. "Japan", "Guatemala", "Spain" — not a code. Many town/city names exist in more than one country (Valencia in Spain and in Venezuela, Santiago in Chile and Cuba and Spain, San José in Costa Rica and California, Antigua the Guatemalan colonial city and Antigua the Caribbean island) and this is the field that tells the app which one you mean, before it ever calls a map. Get this right even when it feels obvious from context — the app cannot infer it from "locality" alone.
 
 List the real sources you used in "sources", including whatever you used to verify current status.
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.

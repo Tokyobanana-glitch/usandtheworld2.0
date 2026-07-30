@@ -255,6 +255,7 @@ function normalizeMapboxFeature(feature) {
     placeName: p.context?.place?.name ?? null,
     regionName: p.context?.region?.name ?? null,
     countryCode: p.context?.country?.country_code ?? null,
+    countryName: p.context?.country?.name ?? null,
     provider: 'mapbox',
     matchedName: p.name ?? null,
   }
@@ -526,25 +527,73 @@ async function evaluateCandidate(candidate, ctx) {
 // day-trip stop's own locality (Nara, for a Kyoto-based trip).
 // ---------------------------------------------------------------------------
 
-async function geocodeCity(place) {
-  const key = normalizeKey(place)
+// City anchors get a fundamentally different treatment from stop candidates,
+// scoped ONLY to this function — never touches mapboxForward's stop-level
+// selection. Cities are few, prominent, and we already know the country from
+// the model's own output, which stops don't reliably have. Two prior fixes
+// attempted here (prefer certain feature types; prefer geographically-
+// clustered candidates) both changed candidate selection GLOBALLY and
+// net-regressed the stop fixture by fixing Tokyo while breaking unrelated
+// Guatemala/Philippines stop lookups — see mapboxForward's history comment.
+// This fix only ever changes what geocodeCity itself does.
+//
+// Root cause this addresses: a bare city name is under-specified. "Tokyo"
+// with no qualification returned an obscure same-named "locality" in the
+// Pacific (near Papua New Guinea) ranked ABOVE "東京都", the real Tokyo, in
+// the very same result set. Qualifying the query with the country the model
+// already emits ("Tokyo, Japan") resolves the ambiguity at the query level
+// rather than trying to out-guess Mapbox's ranking after the fact — and
+// validating the result's own country against that same expectation catches
+// anything that still slips through, rejecting a mismatch outright rather
+// than silently accepting a wrong-country anchor that would poison every
+// stop's proximity bias, distance ceiling, and context validation beneath it.
+// Exported for the anchor regression fixture (scripts/anchor-fixture.mjs) to
+// call directly — testing the anchor through geocodeStops with a synthetic
+// stop would conflate anchor resolution with stop-level candidate selection,
+// which is a different, untouched code path.
+export async function geocodeCity(place, expectedCountry) {
+  const key = normalizeKey(`${place}|${expectedCountry || ''}`)
   if (CITY_CACHE.has(key)) return CITY_CACHE.get(key)
 
-  // Try the narrow, city-level types first. Many countries reuse the same
-  // name for both a city and its enclosing region (Japan's Nara City/Nara
-  // Prefecture is the case that surfaced this) — searching with 'region'
-  // included from the start let Mapbox rank the prefecture first, whose
-  // broad centroid sat 47km from the actual city and made every stop in it
-  // fail the distance ceiling. Only fall back to the wider set (which
-  // includes region/country) when the narrow search finds nothing, so a
-  // genuine region/country-level anchor (unusual, but possible) still works.
-  // (Trusting Mapbox's own top-1 rank here rather than re-ranking candidates
-  // — see mapboxForward's comment for why two different reranking attempts
-  // were tried and reverted.)
-  let { candidate } = await mapboxForward(place, { types: 'place,locality,district' })
-  if (!candidate) {
-    ;({ candidate } = await mapboxForward(place, { types: 'place,locality,region,district,country' }))
+  const query = expectedCountry ? `${place}, ${expectedCountry}` : place
+
+  function countryOk(candidate) {
+    if (!expectedCountry || !candidate?.countryName) return true
+    return placeNamesMatch(candidate.countryName, expectedCountry)
   }
+
+  // Narrow, city-level types first — see below for why 'region' isn't
+  // included from the start (Japan's Nara City/Nara Prefecture homonym).
+  let { candidate } = await mapboxForward(query, { types: 'place,locality,district' })
+  let rejectedForCountry = candidate && !countryOk(candidate)
+  if (rejectedForCountry) candidate = null
+
+  if (!candidate) {
+    // Broader fallback (region/country-level types included) — many
+    // countries reuse the same name for both a city and its enclosing
+    // region, and searching with 'region' included from the very start let
+    // the prefecture rank first, whose broad centroid sat 47km from the
+    // actual city and made every stop in it fail the distance ceiling. Only
+    // reached when the narrow search found nothing (or was rejected for
+    // country mismatch), so a genuine region/country-level anchor still works.
+    const wider = await mapboxForward(query, { types: 'place,locality,region,district,country' })
+    if (wider.candidate && !countryOk(wider.candidate)) {
+      rejectedForCountry = true
+    } else {
+      candidate = wider.candidate
+    }
+  }
+
+  if (!candidate && expectedCountry) {
+    // Every stop under this anchor silently failing looks like a coverage
+    // problem, not a single upstream error — say so explicitly instead of
+    // letting the itinerary quietly come back empty with no clear cause.
+    console.error(
+      `GEOCODE ANCHOR FAILURE: could not resolve "${place}" in "${expectedCountry}"` +
+        (rejectedForCountry ? ' (candidates found but none matched the expected country)' : ' (no candidates found)'),
+    )
+  }
+
   const result = candidate
     ? { lat: candidate.lat, lng: candidate.lng, placeName: candidate.placeName, regionName: candidate.regionName, countryCode: candidate.countryCode }
     : null
@@ -564,7 +613,7 @@ async function resolveValidationAnchor(stop, baseCityInfo) {
     return { targetCityName: stop.city, targetRegionName: baseCityInfo?.regionName ?? null, targetCountryCode: baseCityInfo?.countryCode ?? null, cityCenter: baseCityInfo ? { lat: baseCityInfo.lat, lng: baseCityInfo.lng } : null, tier: stop.proximity === 'day-trip' ? 'day-trip' : 'in-city' }
   }
 
-  const localityInfo = await geocodeCity(stop.locality)
+  const localityInfo = await geocodeCity(stop.locality, stop.country)
   if (!localityInfo) {
     // Couldn't anchor the claimed locality itself — fall back to the loose tier.
     return { targetCityName: stop.city, targetRegionName: baseCityInfo?.regionName ?? null, targetCountryCode: baseCityInfo?.countryCode ?? null, cityCenter: baseCityInfo ? { lat: baseCityInfo.lat, lng: baseCityInfo.lng } : null, tier: 'day-trip' }
@@ -744,10 +793,16 @@ async function geocodeOne(stop, cityInfo, wikidataBudget) {
 export async function geocodeStops(stops) {
   // Phase 1: geocode each distinct city AND each distinct day-trip locality
   // once (cached) — both serve as proximity bias and validation anchors.
-  const uniquePlaces = [...new Set(stops.flatMap((s) => [s.city, s.locality]).filter(Boolean))].map(normalizeKey)
-  const uniquePlacesDeduped = [...new Set(uniquePlaces)]
-  const placeResults = await Promise.all(uniquePlacesDeduped.map((p) => geocodeCity(p)))
-  const cityInfoByPlace = new Map(uniquePlacesDeduped.map((p, i) => [p, placeResults[i]]))
+  // Keep each place's original (un-normalized) text and the country the
+  // model attached to it, so the anchor lookup can be country-qualified.
+  const placesByKey = new Map()
+  stops.forEach((s) => {
+    if (s.city) placesByKey.set(normalizeKey(s.city), { place: s.city, country: s.country })
+    if (s.locality) placesByKey.set(normalizeKey(s.locality), { place: s.locality, country: s.country })
+  })
+  const uniqueKeys = [...placesByKey.keys()]
+  const placeResults = await Promise.all(uniqueKeys.map((k) => geocodeCity(placesByKey.get(k).place, placesByKey.get(k).country)))
+  const cityInfoByPlace = new Map(uniqueKeys.map((k, i) => [k, placeResults[i]]))
 
   // Phase 2: geocode every stop in parallel; each stop's own ladder runs
   // sequentially (rung by rung, provider by provider) internally, but stops

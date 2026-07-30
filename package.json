@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:geocode": "node scripts/geocode-fixture.mjs"
+    "test:geocode": "node scripts/geocode-fixture.mjs",
+    "test:anchors": "node scripts/anchor-fixture.mjs",
+    "test:geocode:all": "npm run test:anchors && npm run test:geocode"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.114.0",
