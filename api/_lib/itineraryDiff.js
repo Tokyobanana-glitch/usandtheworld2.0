@@ -34,6 +34,7 @@ export function diffItineraries(oldPayload, newPayload) {
   const newByKey = new Map(flattenStops(newPayload.itinerary).map((s) => [stopKey(s), s]))
 
   const statusChanged = []
+  const unchanged = []
   const removed = []
   const added = []
 
@@ -49,6 +50,8 @@ export function diffItineraries(oldPayload, newPayload) {
         newStatus: newStop.status,
         newStatusNote: newStop.statusNote,
       })
+    } else {
+      unchanged.push({ name: newStop.name, city: newStop.city, status: newStop.status })
     }
   }
 
@@ -56,5 +59,12 @@ export function diffItineraries(oldPayload, newPayload) {
     if (!oldByKey.has(key)) added.push({ name: newStop.name, city: newStop.city, status: newStop.status })
   }
 
-  return { statusChanged, removed, added, hasChanges: statusChanged.length > 0 || removed.length > 0 || added.length > 0 }
+  return {
+    statusChanged,
+    unchanged,
+    removed,
+    added,
+    checkedCount: oldByKey.size,
+    hasChanges: statusChanged.length > 0 || removed.length > 0 || added.length > 0,
+  }
 }

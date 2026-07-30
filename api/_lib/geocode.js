@@ -200,14 +200,27 @@ async function fetchWithBackoff(fn) {
 // Mapbox Search Box
 // ---------------------------------------------------------------------------
 
-async function mapboxForward(query, { proximity, types } = {}) {
+// Tried re-ranking a bare city-name query's top candidates two different
+// ways (prefer 'place' type; prefer whichever candidate geographically
+// clusters with another candidate) after finding "Tokyo" with limit=1
+// returned an obscure same-named "locality" in the Pacific ahead of the real
+// 東京都. Both attempts fixed Tokyo specifically but net-regressed the
+// broader 30-place fixture (87% vs. this file's 90% baseline) — a coincidental
+// cluster of two WRONG matches (e.g. two unrelated villages both named
+// "Santo" in Italy, two unrelated "San Juan" neighborhoods in the
+// Philippines) beat a correct singleton match just as often as a real
+// disambiguation signal beat a wrong one. Reverted: Mapbox's own top-1 rank,
+// naive as it is, empirically outperforms both reranking heuristics tried
+// here. Tokyo's specific anchor bug is a known, currently-unfixed residual —
+// left as future work rather than shipping a "fix" with a worse net result.
+async function mapboxForward(query, { proximity, types, limit = 1 } = {}) {
   const token = process.env.MAPBOX_TOKEN
   if (!token) return { candidate: null, rateLimited: false }
 
-  const cacheKey = normalizeKey(`${query}|${proximity ? `${proximity.lat},${proximity.lng}` : ''}|${types ?? ''}`)
+  const cacheKey = normalizeKey(`${query}|${proximity ? `${proximity.lat},${proximity.lng}` : ''}|${types ?? ''}|${limit}`)
   if (MAPBOX_QUERY_CACHE.has(cacheKey)) return MAPBOX_QUERY_CACHE.get(cacheKey)
 
-  let url = `https://api.mapbox.com/search/searchbox/v1/forward?q=${encodeURIComponent(query)}&access_token=${token}&limit=1`
+  let url = `https://api.mapbox.com/search/searchbox/v1/forward?q=${encodeURIComponent(query)}&access_token=${token}&limit=${limit}`
   if (proximity) url += `&proximity=${proximity.lng},${proximity.lat}`
   if (types) url += `&types=${types}`
 
@@ -435,14 +448,28 @@ function placeNamesMatch(a, b) {
 }
 
 // When the place name doesn't match by string, check whether it's the same
-// place under a different label/granularity by independently geocoding it
-// and comparing distance to the target city's own anchor — rather than
-// trusting a fragile string comparison to be the final word.
-async function isContextAlias(candidatePlaceName, cityCenter) {
-  if (!cityCenter) return false
+// place under a different label/granularity — two independent signals,
+// checked in order, because neither alone covers both a small town and a
+// sprawling megacity:
+//
+// 1. Hierarchy: does the alias's own parent place match our target? Confirmed
+//    live: geocoding "Shibuya" in isolation returns context.place="東京都"
+//    (Tokyo) directly — this is what actually distinguishes "a subdivision
+//    of the target city" from "a separate, same-region neighboring town",
+//    which flat distance alone can't. A megacity's own districts can sit
+//    farther from an arbitrary city-center point than a genuinely different
+//    small town is from a small city's center (Tokyo's Asakusa ward vs.
+//    Antigua/Santa María de Jesús, 7.5km, are comparable distances — only
+//    hierarchy tells them apart).
+// 2. Distance fallback: same place under a language/granularity difference
+//    with no usable parent-place data (Rome/Roma, Prague/Praha) — measured
+//    0.2-2km apart, versus the original wrong-town bug at 7.5km.
+async function isContextAlias(candidatePlaceName, ctx) {
+  if (!ctx.cityCenter) return false
   const aliasInfo = await geocodeCity(candidatePlaceName)
   if (!aliasInfo) return false
-  return haversineKm(cityCenter, aliasInfo) <= CONTEXT_ALIAS_KM
+  if (aliasInfo.placeName && placeNamesMatch(aliasInfo.placeName, ctx.targetCityName)) return true
+  return haversineKm(ctx.cityCenter, aliasInfo) <= CONTEXT_ALIAS_KM
 }
 
 async function evaluateCandidate(candidate, ctx) {
@@ -477,7 +504,7 @@ async function evaluateCandidate(candidate, ctx) {
   // ceiling, but its context.place was "Santa María de Jesús" — a different
   // town's plaza.
   if (candidate.placeName) {
-    if (!cityMatches && !(await isContextAlias(candidate.placeName, ctx.cityCenter))) {
+    if (!cityMatches && !(await isContextAlias(candidate.placeName, ctx))) {
       return { accept: false, reason: `context mismatch — resolved in "${candidate.placeName}", not "${ctx.targetCityName}"` }
     }
     if (distanceKm !== null && distanceKm > IN_CITY_DISTANCE_CEILING_KM) {
@@ -511,11 +538,16 @@ async function geocodeCity(place) {
   // fail the distance ceiling. Only fall back to the wider set (which
   // includes region/country) when the narrow search finds nothing, so a
   // genuine region/country-level anchor (unusual, but possible) still works.
+  // (Trusting Mapbox's own top-1 rank here rather than re-ranking candidates
+  // — see mapboxForward's comment for why two different reranking attempts
+  // were tried and reverted.)
   let { candidate } = await mapboxForward(place, { types: 'place,locality,district' })
   if (!candidate) {
     ;({ candidate } = await mapboxForward(place, { types: 'place,locality,region,district,country' }))
   }
-  const result = candidate ? { lat: candidate.lat, lng: candidate.lng, regionName: candidate.regionName, countryCode: candidate.countryCode } : null
+  const result = candidate
+    ? { lat: candidate.lat, lng: candidate.lng, placeName: candidate.placeName, regionName: candidate.regionName, countryCode: candidate.countryCode }
+    : null
 
   CITY_CACHE.set(key, result)
   return result

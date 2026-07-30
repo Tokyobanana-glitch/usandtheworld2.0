@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { askTravelAssistant } from './services/travelAssistant'
 import { addRecentTrip } from './services/recentTrips'
+import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatCheckDate } from './itineraryUtils'
 import RecentTrips from './RecentTrips'
 import './App.css'
 
@@ -52,6 +53,14 @@ function extractTopic(rawQuery) {
   return q
 }
 
+// Loading phrases stay topic-based rather than naming specific stops on
+// purpose — see Part E discussion: naming real stop names here would require
+// streaming the model's output and incrementally parsing partial structured
+// JSON to know what it's working on in real time. That's a genuinely
+// different request lifecycle (SSE plumbing, a streaming-tolerant partial-
+// JSON parser), not a small addition, and faking specificity with names the
+// model isn't actually verifying yet would be a worse lie than a generic
+// phrase. Keeping this fallback until that's worth building on its own.
 function buildLoadingPhrases(rawQuery) {
   const topic = extractTopic(rawQuery)
   if (topic) {
@@ -88,11 +97,26 @@ function ClearIcon() {
   )
 }
 
-const STATUS_LABELS = { open: 'Open', closed: 'Closed', seasonal: 'Seasonal', unverified: 'Unverified' }
+const STATUS_LABELS = { open: 'Open', closed: 'Closed', seasonal: 'Seasonal', 'exterior-only': 'Exterior only', unverified: 'Unverified' }
 
-export function StatusChip({ status }) {
-  const key = STATUS_LABELS[status] ? status : 'unverified'
-  return <span className={`status-chip status-chip--${key}`}>{STATUS_LABELS[key]}</span>
+// A status with no source is shown as unverified regardless of what the
+// model claimed — an unsupported claim doesn't get credit for looking
+// confident. Only a sourced, non-unverified status becomes a clickable link,
+// with the check date visible next to it rather than buried in a tooltip.
+export function StatusChip({ status, sourceUrl, verifiedAt }) {
+  const hasSource = Boolean(sourceUrl && sourceUrl.trim())
+  const key = hasSource && STATUS_LABELS[status] ? status : 'unverified'
+  const label = STATUS_LABELS[key]
+
+  if (hasSource && key !== 'unverified') {
+    return (
+      <a className={`status-chip status-chip--${key}`} href={sourceUrl} target="_blank" rel="noopener noreferrer">
+        {label}
+        <span className="status-check-date">checked {formatCheckDate(verifiedAt)}</span>
+      </a>
+    )
+  }
+  return <span className={`status-chip status-chip--${key}`}>{label}</span>
 }
 
 export function LegConnector({ leg }) {
@@ -115,17 +139,18 @@ export function LegConnector({ leg }) {
   )
 }
 
-export function StopCard({ stop }) {
+export function StopCard({ stop, verifiedAt }) {
   return (
     <div className={`stop-card${stop.unlocatable ? ' stop-card--unlocatable' : ''}`}>
       <div className="stop-card-header">
         <span className="stop-name">{stop.name}</span>
-        <StatusChip status={stop.status} />
+        <StatusChip status={stop.status} sourceUrl={stop.sourceUrl} verifiedAt={verifiedAt} />
       </div>
       <div className="stop-meta">
         {stop.category && <span className="stop-chip">{stop.category}</span>}
         {stop.timeOfDay && <span className="stop-chip">{stop.timeOfDay}</span>}
         {stop.durationMinutes ? <span className="stop-chip">~{stop.durationMinutes} min</span> : null}
+        {stop.priceIndicator && <span className="stop-chip stop-chip--price">{stop.priceIndicator}</span>}
       </div>
       {stop.why && <p className="stop-why">{stop.why}</p>}
       {stop.statusNote && <p className="stop-status-note">{stop.statusNote}</p>}
@@ -138,7 +163,7 @@ export function StopCard({ stop }) {
 // this change) may still have `activities: [string]` instead of `stops:
 // [object]` — checked right here via `day.stops` presence, so a mixed-shape
 // thread never crashes.
-export function ItineraryDay({ day }) {
+export function ItineraryDay({ day, verifiedAt }) {
   if (!day.stops) {
     return (
       <div className="itinerary-day">
@@ -155,16 +180,34 @@ export function ItineraryDay({ day }) {
   }
 
   const legByFromIndex = new Map((day.legs || []).map((leg) => [leg.fromIndex, leg]))
+  const summary = computeDaySummary(day)
 
   return (
     <div className="itinerary-day">
       <h4>
         Day {day.day}: {day.title}
       </h4>
+      <div className="day-summary-strip">
+        <span>{summary.stopCount} stop{summary.stopCount === 1 ? '' : 's'}</span>
+        {summary.walkingMinutes > 0 && <span>{summary.walkingMinutes} min walking</span>}
+        {summary.drivingMinutes > 0 && <span>{summary.drivingMinutes} min driving</span>}
+        {summary.totalCost && (
+          <span>
+            {summary.totalCost.amount === 0
+              ? 'Free'
+              : summary.totalCost.isSuffix
+                ? `~${Math.round(summary.totalCost.amount * 100) / 100} ${summary.totalCost.symbol || ''}`
+                : `~${summary.totalCost.symbol || ''}${Math.round(summary.totalCost.amount * 100) / 100}`}
+          </span>
+        )}
+        {!summary.totalCost && summary.priceCount > 0 && (
+          <span>{summary.priceCount} stop{summary.priceCount === 1 ? '' : 's'} with pricing</span>
+        )}
+      </div>
       <div className="stop-list">
         {day.stops.map((stop, i) => (
           <div key={i}>
-            <StopCard stop={stop} />
+            <StopCard stop={stop} verifiedAt={verifiedAt} />
             {legByFromIndex.has(i) && <LegConnector leg={legByFromIndex.get(i)} />}
           </div>
         ))}
@@ -173,16 +216,67 @@ export function ItineraryDay({ day }) {
   )
 }
 
-export function TurnAnswer({ result }) {
+const SENTENCE_SPLIT = /[^.!?]+[.!?]+(\s+|$)/g
+const TRUNCATE_SENTENCE_LIMIT = 3
+
+// The itinerary is the product — long prose above it pushed the actual plan
+// below the fold. Truncated to a few sentences with an explicit expand
+// control, rather than hidden entirely.
+function TruncatedAnswer({ text }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!text) return null
+
+  const sentences = text.match(SENTENCE_SPLIT) || [text]
+  if (sentences.length <= TRUNCATE_SENTENCE_LIMIT) {
+    return <p className="result-answer">{text}</p>
+  }
+
+  const truncated = sentences.slice(0, TRUNCATE_SENTENCE_LIMIT).join('').trim()
+  return (
+    <div className="truncated-answer">
+      <p className="result-answer">{expanded ? text : truncated}</p>
+      <button type="button" className="truncate-toggle" onClick={() => setExpanded((e) => !e)}>
+        {expanded ? 'Show less' : 'Read more'}
+      </button>
+    </div>
+  )
+}
+
+// verifiedAt defaults to "now" for a fresh, in-thread answer (it really was
+// just checked) — TripPage passes the saved trip's actual verifiedAt instead.
+export function TurnAnswer({ result, verifiedAt }) {
+  const effectiveVerifiedAt = verifiedAt || new Date().toISOString()
+  const hasItinerary = result.itinerary?.length > 0
+  const summary = hasItinerary ? computeVerificationSummary(result.itinerary) : null
+
   return (
     <div className="result-details">
       <h2>{result.destination}</h2>
-      <p className="result-answer">{result.answer}</p>
+      <TruncatedAnswer text={result.answer} />
 
-      {result.slug && result.itinerary?.length > 0 && (
+      {result.slug && hasItinerary && (
         <a className="share-trip-link" href={`/trip/${result.slug}`}>
           Share this trip →
         </a>
+      )}
+
+      {summary && (
+        <p className="verification-receipt">
+          {summary.total} stop{summary.total === 1 ? '' : 's'} checked against live sources on{' '}
+          {formatCheckDate(effectiveVerifiedAt)}
+          {summary.needsAttentionCount === 0
+            ? ' — all currently open.'
+            : ` — ${summary.needsAttentionCount} need${summary.needsAttentionCount === 1 ? 's' : ''} your attention: ${formatBreakdown(summary.breakdown)}.`}
+        </p>
+      )}
+
+      {hasItinerary && (
+        <div className="result-section result-section--hero">
+          <h3>Itinerary</h3>
+          {result.itinerary.map((day) => (
+            <ItineraryDay key={day.day} day={day} verifiedAt={effectiveVerifiedAt} />
+          ))}
+        </div>
       )}
 
       {result.bestTimeToVisit && (
@@ -201,15 +295,6 @@ export function TurnAnswer({ result }) {
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {result.itinerary?.length > 0 && (
-        <div className="result-section">
-          <h3>Itinerary</h3>
-          {result.itinerary.map((day) => (
-            <ItineraryDay key={day.day} day={day} />
-          ))}
         </div>
       )}
 

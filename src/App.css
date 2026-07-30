@@ -235,10 +235,36 @@
 }
 
 .result-answer {
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.6;
-  color: #f2f2f5;
+  color: rgba(242, 242, 245, 0.85);
+  margin: 0 0 6px;
+}
+
+.truncated-answer {
   margin: 0 0 12px;
+}
+
+.truncate-toggle {
+  background: none;
+  border: none;
+  color: #c084fc;
+  font-size: 12.5px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.truncate-toggle:hover {
+  text-decoration: underline;
+}
+
+.verification-receipt {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 0 16px;
 }
 
 .result-best-time {
@@ -259,6 +285,23 @@
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.6);
   margin: 0 0 10px;
+}
+
+/* The itinerary is the product — visually distinct from the secondary
+   sections (suggestions, sources) that follow it, not just another
+   .result-section in the stack. */
+.result-section--hero {
+  margin-top: 0;
+  padding: 16px 16px 4px;
+  border-top: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.result-section--hero h3 {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .result-section ul {
@@ -324,6 +367,27 @@
   padding: 2px 8px;
 }
 
+.stop-chip--price {
+  text-transform: none;
+  color: #c4e0ff;
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.day-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 10px;
+}
+
+.day-summary-strip span:not(:last-child)::after {
+  content: '·';
+  margin-left: 10px;
+  opacity: 0.5;
+}
+
 .stop-why {
   font-size: 14px;
   color: rgba(242, 242, 245, 0.9);
@@ -373,6 +437,32 @@
   color: rgba(255, 255, 255, 0.6);
   background: rgba(255, 255, 255, 0.08);
   border: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+.status-chip--exterior-only {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.15);
+}
+
+a.status-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+a.status-chip:hover {
+  filter: brightness(1.2);
+}
+
+.status-check-date {
+  font-size: 8.5px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.75;
 }
 
 .leg-connector {
@@ -523,8 +613,40 @@
   margin: 0 0 8px;
 }
 
-.trip-stale-badge {
+/* Prominent by design — a stale trip's whole point is to get the viewer to
+   act, not to quietly disclaim accuracy in a muted footnote. */
+.trip-stale-banner {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+}
+
+.trip-stale-banner p {
   color: #fbbf24;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.trip-check-changes-btn {
+  background: #fbbf24;
+  border: none;
+  color: #1a1400;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.trip-check-changes-btn:hover {
+  background: #fcd34d;
+}
+
+.trip-check-changes-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .trip-newer-link {
@@ -545,7 +667,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.trip-reverify-block > button {
+.trip-reverify-quiet-btn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: #f2f2f5;
@@ -555,28 +677,69 @@
   cursor: pointer;
 }
 
-.trip-reverify-block > button:hover {
+.trip-reverify-quiet-btn:hover {
   background: rgba(255, 255, 255, 0.16);
 }
 
-.trip-reverify-block > button:disabled {
+.trip-reverify-quiet-btn:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.trip-diff {
-  margin-top: 16px;
-  font-size: 13.5px;
-  color: rgba(255, 255, 255, 0.8);
+.trip-diff-summary {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2f2f5;
+  margin: 0 0 14px;
 }
 
-.trip-diff h4 {
+.trip-diff-group {
+  margin-bottom: 14px;
+}
+
+.trip-diff-group h4 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 12px 0 6px;
+  margin: 0 0 6px;
   font-weight: 400;
+}
+
+.trip-diff-group--prominent {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid #c084fc;
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+}
+
+.trip-diff-group--prominent h4 {
+  color: #c084fc;
+}
+
+.trip-diff-group--prominent ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: rgba(242, 242, 245, 0.9);
+  line-height: 1.6;
+}
+
+/* Unchanged stops are the least interesting outcome of a re-verify — quiet
+   and collapsed by default (native <details>), not competing for attention
+   with what actually changed. */
+.trip-diff-group--quiet {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12.5px;
+}
+
+.trip-diff-group--quiet summary {
+  cursor: pointer;
+}
+
+.trip-diff-group--quiet ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
 }
 
 @media (max-width: 640px) {

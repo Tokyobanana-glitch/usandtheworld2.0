@@ -6,6 +6,10 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+function pluralize(n, word) {
+  return `${n} ${word}${n === 1 ? '' : 's'}`
+}
+
 // Standalone page for a saved trip — deliberately NOT embedded in the chat
 // thread. A plan someone will share and edit shouldn't live inside a
 // scrolling conversation. Reads window.__TRIP_DATA__, injected server-side
@@ -51,6 +55,8 @@ export default function TripPage({ data }) {
     })
   }
 
+  const totalChanges = diff ? diff.statusChanged.length + diff.removed.length + diff.added.length : 0
+
   return (
     <main className="trip-page">
       <div className="trip-page-header">
@@ -62,36 +68,53 @@ export default function TripPage({ data }) {
         </button>
       </div>
 
-      <p className="trip-verified-note">
-        Verified on {formatDate(current.verifiedAt)}
-        {current.isStale && (
-          <span className="trip-stale-badge">
-            {' '}
-            — this plan may be out of date. Some places may have changed since it was checked.
-          </span>
-        )}
-      </p>
+      <p className="trip-verified-note">Verified on {formatDate(current.verifiedAt)}</p>
 
-      {current.newerSlug && (
+      {/* Once a re-verify has run, the diff changelog below already states the
+          fresh check result — showing the "may be out of date" prompt on top
+          of it would be a stale claim about a page that just proved it isn't. */}
+      {current.isStale && !diff && (
+        <div className="trip-stale-banner">
+          <p>This plan may be out of date. Some places may have changed since it was last checked.</p>
+          <button type="button" className="trip-check-changes-btn" onClick={handleReverify} disabled={reverifying}>
+            {reverifying ? 'Checking…' : 'Check for changes'}
+          </button>
+          {reverifyError && <p className="result-error">{reverifyError}</p>}
+        </div>
+      )}
+
+      {current.newerSlug && !diff && (
         <a className="trip-newer-link" href={`/trip/${current.newerSlug}`}>
           A newer verified version of this trip exists →
         </a>
       )}
 
-      <TurnAnswer result={current.payload} />
+      <TurnAnswer result={current.payload} verifiedAt={current.verifiedAt} />
 
       <div className="trip-reverify-block">
-        <button type="button" onClick={handleReverify} disabled={reverifying}>
-          {reverifying ? 'Re-verifying…' : 'Re-verify this trip'}
-        </button>
-        {reverifyError && <p className="result-error">{reverifyError}</p>}
-
-        {diff && (
+        {diff ? (
           <div className="trip-diff">
-            {!diff.hasChanges && <p>No changes since the original check.</p>}
+            <p className="trip-diff-summary">
+              {diff.hasChanges
+                ? `Re-checked today — ${pluralize(totalChanges, 'change')} found among ${pluralize(diff.checkedCount, 'stop')}.`
+                : `Re-checked today — all ${pluralize(diff.checkedCount, 'stop')} still current.`}
+            </p>
+
+            {diff.removed.length > 0 && (
+              <div className="trip-diff-group trip-diff-group--prominent">
+                <h4>No longer in the itinerary</h4>
+                <ul>
+                  {diff.removed.map((r, i) => (
+                    <li key={i}>
+                      {r.name} ({r.city}) — was {r.oldStatus}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {diff.statusChanged.length > 0 && (
-              <div>
+              <div className="trip-diff-group trip-diff-group--prominent">
                 <h4>Status changed</h4>
                 <ul>
                   {diff.statusChanged.map((c, i) => (
@@ -104,21 +127,8 @@ export default function TripPage({ data }) {
               </div>
             )}
 
-            {diff.removed.length > 0 && (
-              <div>
-                <h4>No longer in the itinerary</h4>
-                <ul>
-                  {diff.removed.map((r, i) => (
-                    <li key={i}>
-                      {r.name} ({r.city})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {diff.added.length > 0 && (
-              <div>
+              <div className="trip-diff-group trip-diff-group--prominent">
                 <h4>New stops</h4>
                 <ul>
                   {diff.added.map((a, i) => (
@@ -130,12 +140,34 @@ export default function TripPage({ data }) {
               </div>
             )}
 
+            {diff.unchanged.length > 0 && (
+              <details className="trip-diff-group trip-diff-group--quiet">
+                <summary>{pluralize(diff.unchanged.length, 'stop')} unchanged</summary>
+                <ul>
+                  {diff.unchanged.map((u, i) => (
+                    <li key={i}>
+                      {u.name} ({u.city}) — still {u.status}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
             {current.newerSlug && (
               <a className="trip-newer-link" href={`/trip/${current.newerSlug}`}>
                 View the re-verified trip →
               </a>
             )}
           </div>
+        ) : (
+          !current.isStale && (
+            <>
+              <button type="button" className="trip-reverify-quiet-btn" onClick={handleReverify} disabled={reverifying}>
+                {reverifying ? 'Checking…' : 'Check for changes anyway'}
+              </button>
+              {reverifyError && <p className="result-error">{reverifyError}</p>}
+            </>
+          )
         )}
       </div>
     </main>

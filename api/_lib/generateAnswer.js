@@ -76,21 +76,26 @@ const ITINERARY_SCHEMA = {
                 why: { type: 'string', description: 'One short sentence on why this stop, specific to this traveler’s question' },
                 status: {
                   type: 'string',
-                  enum: ['open', 'closed', 'seasonal', 'unverified'],
+                  enum: ['open', 'closed', 'seasonal', 'exterior-only', 'unverified'],
                   description:
-                    'This stop’s current operating status, based on what you actually found searching. Use "unverified" honestly whenever you could not confirm current status — never default to "open" as an assumption just because a place is well-known.',
+                    'This stop’s current operating status, based on what you actually found searching. Use "unverified" honestly whenever you could not confirm current status — never default to "open" as an assumption just because a place is well-known. "closed" means gone, demolished, or shut with no public access at all — do NOT use it for a place that still stands and can be viewed/photographed from outside but isn’t enterable (interior closed for renovation, no longer open to visitors, etc.) — use "exterior-only" for that instead. These are different facts and travelers plan differently around them.',
                 },
                 statusNote: {
                   type: 'string',
                   description:
-                    'Brief note backing up the status, e.g. "closed for renovation until 2027", "seasonal, open June-August only", or "could not find current hours during search" when unverified.',
+                    'Brief note backing up the status, e.g. "closed for renovation until 2027", "seasonal, open June-August only", "exterior visible from the plaza, interior not open to visitors", or "could not find current hours during search" when unverified.',
                 },
                 sourceUrl: {
                   type: 'string',
-                  description: 'URL of the specific source used to verify this stop’s status, if you have one; empty string if none.',
+                  description: 'URL of the specific source used to verify this stop’s status, if you have one; empty string if none. A status without a source is shown to the traveler as unverified regardless of what this field says, so leaving it empty when you have no real source is honest, not a loss.',
+                },
+                priceIndicator: {
+                  type: 'string',
+                  description:
+                    'Rough entry/visit cost if you found one during search, in the local format you found it, e.g. "€8", "$15", "Free". Empty string if you found no pricing information — do not guess or estimate one.',
                 },
               },
-              required: ['name', 'searchName', 'city', 'proximity', 'locality', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl'],
+              required: ['name', 'searchName', 'city', 'proximity', 'locality', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl', 'priceIndicator'],
               additionalProperties: false,
             },
           },
@@ -130,7 +135,9 @@ If the traveler's question itself references a specific event, incident, or clai
 
 Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary. If no trip length is implied, return an empty itinerary array.
 
-For every itinerary stop, put the verification work directly into that stop's "status" and "statusNote" fields — this is not just narrative for your answer text, it's structured data the app relies on. Mark a stop "open" only when you found current evidence it's operating, "closed" or "seasonal" when you found evidence of that, and "unverified" whenever you could not confirm current status via search — never default to "open" as a convenient assumption just because a place is famous or you're confident from memory. Do not include a stop's coordinates; the app geocodes each stop server-side from its "searchName" and city.
+For every itinerary stop, put the verification work directly into that stop's "status" and "statusNote" fields — this is not just narrative for your answer text, it's structured data the app relies on. Mark a stop "open" only when you found current evidence it's operating, "closed" when it's gone/demolished/shut with no public access at all, "seasonal" when it's only open part of the year, "exterior-only" when it still stands and can be viewed from outside but isn't enterable (interior closed, no longer open to visitors), and "unverified" whenever you could not confirm current status via search — never default to "open" as a convenient assumption just because a place is famous or you're confident from memory. "closed" and "exterior-only" are different facts, not degrees of the same thing: a demolished building and a standing one you can still photograph from the plaza call for different traveler decisions, and collapsing them into one status is a factual error even if both technically mean "you can't go inside." Do not include a stop's coordinates; the app geocodes each stop server-side from its "searchName" and city.
+
+Always cite a real "sourceUrl" for a stop's status when you have one — the app treats a status with no source as unverified regardless of what you put in "status", so an unsupported claim gets no credit for looking confident. Fill in "priceIndicator" only when you actually found pricing during search; leave it empty rather than estimate.
 
 "name" and "searchName" serve different jobs — do not conflate them. "name" is what the traveler reads and can carry a clarifying qualifier ("Catedral de Santiago (Santiago Cathedral)"). "searchName" is only ever fed to a map search, so it must be the bare official/local-language name with nothing else attached — no parentheses, no "aka", no English translation tacked on, no descriptive suffix like "- Parish & Ruins". An English name for a place that locals and maps refer to by a different name is the single most common way a search fails outright: default to the local-language name in "searchName" whenever the place is not itself an English-named place, even if "name" stays in English for the traveler.
 
