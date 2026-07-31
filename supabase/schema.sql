@@ -29,6 +29,7 @@ create table if not exists itineraries (
   query text not null,              -- original, as typed
   normalized_query text not null,   -- trim/lowercase/whitespace-collapsed, cache-matching key only
   payload jsonb not null,           -- full API response: destination, answer, itinerary (with stops+legs), sources, etc.
+  schema_version integer not null default 1,  -- payload shape version; see CURRENT_SCHEMA_VERSION in itineraryStore.js
   created_at timestamptz not null default now(),
   verified_at timestamptz not null default now(),
   owner text,                       -- nullable; no auth yet, reserved for later
@@ -38,6 +39,10 @@ create table if not exists itineraries (
 create index if not exists itineraries_slug_idx on itineraries (slug);
 create index if not exists itineraries_normalized_query_idx on itineraries (normalized_query);
 create index if not exists itineraries_source_slug_idx on itineraries (source_slug);
+
+-- Already-provisioned databases won't pick up the column from create table
+-- (it's a no-op once the table exists), so add it explicitly and idempotently.
+alter table itineraries add column if not exists schema_version integer not null default 1;
 
 -- Enable RLS with zero policies: deny-all for anon/authenticated, and no
 -- effect on our own server code, which exclusively uses the service_role key

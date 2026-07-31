@@ -8,6 +8,12 @@ import { generateSlug, normalizeQuery } from './slug.js'
 // silent regeneration with different stops or ordering.
 export const CACHE_FRESHNESS_DAYS = 14
 
+// Bump this whenever the payload/stop shape changes (new fields, new status
+// values, etc). It gates CACHE-MATCHING ONLY — see findCachedItinerary below.
+// It must never gate getItineraryBySlug: a saved trip stays exactly as it
+// was saved regardless of which schema version produced it.
+export const CURRENT_SCHEMA_VERSION = 1
+
 export { normalizeQuery }
 
 // Exact-string match only, and only within the freshness window. Free-text
@@ -15,6 +21,10 @@ export { normalizeQuery }
 // served as a hit (two subtly different trips treated as the same) is worse
 // than the cost of regenerating. This is intentionally simple: no fuzzy
 // matching, no embeddings, just an indexed equality lookup.
+//
+// Also requires an exact schema_version match, so a row saved under an older
+// payload shape falls through to a fresh regeneration instead of being
+// served as if it had fields it doesn't.
 export async function findCachedItinerary(rawQuery) {
   const supabase = getSupabase()
   if (!supabase) return null
@@ -26,6 +36,7 @@ export async function findCachedItinerary(rawQuery) {
     .from('itineraries')
     .select('slug, payload, created_at')
     .eq('normalized_query', normalized)
+    .eq('schema_version', CURRENT_SCHEMA_VERSION)
     .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -107,6 +118,7 @@ export async function saveItinerary({ query, payload, sourceSlug = null }) {
     query,
     normalized_query: normalizeQuery(query),
     payload,
+    schema_version: CURRENT_SCHEMA_VERSION,
     created_at: now,
     verified_at: now,
     source_slug: sourceSlug,
