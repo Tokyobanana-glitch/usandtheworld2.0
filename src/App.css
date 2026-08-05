@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   overflow: hidden;
   background: #050813;
   color: #fff;
@@ -46,13 +46,10 @@
   width: 100%;
   max-width: 760px;
   padding: 24px 20px;
-  padding-bottom: clamp(48px, 10vh, 110px);
   box-sizing: border-box;
 }
 
 .search-bar {
-  position: relative;
-  z-index: 0;
   width: 100%;
   max-width: 640px;
   display: flex;
@@ -61,23 +58,7 @@
   background: rgba(236, 236, 240, 0.94);
   border-radius: 12px;
   padding: 16px 20px;
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.35),
-    0 0 90px 14px rgba(255, 214, 130, 0.35);
-}
-
-.search-bar::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200%;
-  height: 380%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, rgba(255, 221, 150, 0.55), rgba(255, 221, 150, 0.15) 50%, transparent 72%);
-  filter: blur(4px);
-  z-index: -1;
-  pointer-events: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
 
 .search-icon {
