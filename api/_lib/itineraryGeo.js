@@ -1,5 +1,6 @@
 import { geocodeStops } from './geocode.js'
 import { haversineKm } from './geoMath.js'
+import { attachCreatorClips } from './creatorClips.js'
 
 // Named, tunable constants — no magic numbers buried in logic below.
 export const WALKING_THRESHOLD_KM = 1.2 // legs shorter than this are walked; longer are driven
@@ -285,10 +286,15 @@ export async function enrichItinerary(itinerary) {
     console.log(`itinerary re-clustering: ${titleConflictCount} day title(s) reassigned/synthesized due to geographic regrouping`)
   }
 
-  return dayGroups.map((stops, i) => ({
+  const finalDays = dayGroups.map((stops, i) => ({
     day: i + 1,
     title: titles[i],
     stops: stops.map(({ __originalDayIdx, ...rest }) => rest),
     legs: legsPerDay[i],
   }))
+
+  // Last step, after geography is settled: attach any of your own clips that
+  // match a stop's resolved place identity. Never blocks or fails the
+  // itinerary — see attachCreatorClips.
+  return attachCreatorClips(finalDays)
 }

@@ -1,5 +1,10 @@
 {
   "rewrites": [
-    { "source": "/trip/:slug", "destination": "/api/trip-page?slug=:slug" }
+    { "source": "/trip/:slug", "destination": "/api/trip-page?slug=:slug" },
+    { "source": "/explore", "destination": "/api/explore-page" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
+  ],
+  "crons": [
+    { "path": "/api/cron/check-watches", "schedule": "0 14 * * *" }
   ]
 }

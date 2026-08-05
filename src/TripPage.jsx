@@ -20,6 +20,9 @@ export default function TripPage({ data }) {
   const [reverifyError, setReverifyError] = useState(null)
   const [diff, setDiff] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [watchEmail, setWatchEmail] = useState('')
+  const [watchStatus, setWatchStatus] = useState('idle') // idle | saving | done | error
+  const [watchError, setWatchError] = useState(null)
 
   useEffect(() => {
     addRecentTrip({ slug: current.slug, destination: current.payload.destination, query: current.query })
@@ -53,6 +56,25 @@ export default function TripPage({ data }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  async function handleWatchSubmit(event) {
+    event.preventDefault()
+    setWatchStatus('saving')
+    setWatchError(null)
+    try {
+      const res = await fetch('/api/trip-watch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: current.slug, email: watchEmail }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Something went wrong')
+      setWatchStatus('done')
+    } catch (err) {
+      setWatchStatus('error')
+      setWatchError(err.message || 'Something went wrong — please try again.')
+    }
   }
 
   const totalChanges = diff ? diff.statusChanged.length + diff.removed.length + diff.added.length : 0
@@ -168,6 +190,32 @@ export default function TripPage({ data }) {
               {reverifyError && <p className="result-error">{reverifyError}</p>}
             </>
           )
+        )}
+      </div>
+
+      <div className="trip-watch-block">
+        {watchStatus === 'done' ? (
+          <p className="trip-watch-confirmation">We'll email you if anything on this trip changes.</p>
+        ) : (
+          <form className="trip-watch-form" onSubmit={handleWatchSubmit}>
+            <label htmlFor="trip-watch-email" className="trip-watch-label">
+              Get notified if a place on this trip closes or changes
+            </label>
+            <div className="trip-watch-row">
+              <input
+                id="trip-watch-email"
+                type="email"
+                required
+                placeholder="you@email.com"
+                value={watchEmail}
+                onChange={(event) => setWatchEmail(event.target.value)}
+              />
+              <button type="submit" disabled={watchStatus === 'saving'}>
+                {watchStatus === 'saving' ? 'Saving…' : 'Notify me'}
+              </button>
+            </div>
+            {watchStatus === 'error' && <p className="result-error">{watchError}</p>}
+          </form>
         )}
       </div>
     </main>

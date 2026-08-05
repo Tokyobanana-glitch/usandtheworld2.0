@@ -710,7 +710,10 @@ async function tryGeoapify(name, searchName, city, ctx) {
 // against (locality for a day-trip stop, city otherwise) + country code —
 // NOT on the raw query string, since this caches "this place, resolved",
 // not "this exact provider request".
-function geocodeCacheKey(searchName, name, targetCityName, countryCode) {
+// Exported so other features can compute the exact same place-identity key
+// this pipeline resolves to — e.g. attaching creator content to a stop by
+// the same identity a geocode was cached under (see creatorClips.js).
+export function geocodeCacheKey(searchName, name, targetCityName, countryCode) {
   return normalizeKey(`${searchName || name}|${targetCityName}|${countryCode || 'unknown'}`)
 }
 
@@ -748,6 +751,7 @@ async function geocodeOne(stop, cityInfo, wikidataBudget) {
       winner: { candidate: { lat: persisted.lat, lng: persisted.lng }, provider: persisted.provider, wonBy: `cached:${persisted.rung}` },
       attempted: ['db-cache'],
       rateLimited: false,
+      cacheKey,
     }
   }
 
@@ -778,7 +782,7 @@ async function geocodeOne(stop, cityInfo, wikidataBudget) {
     console.log(`geocode exhausted all providers for "${name}, ${city}" (attempted: ${attempted.join(', ')}${anyRateLimited ? ', RATE-LIMITED' : ''})`)
   }
 
-  return { winner, attempted, rateLimited: anyRateLimited && !winner }
+  return { winner, attempted, rateLimited: anyRateLimited && !winner, cacheKey }
 }
 
 // Geocodes every stop in parallel. Returns a new array of stops with lat/lng
@@ -815,13 +819,16 @@ export async function geocodeStops(stops) {
 
   const failures = []
   const enriched = stops.map((s, i) => {
-    const { winner, attempted, rateLimited } = results[i]
+    const { winner, attempted, rateLimited, cacheKey } = results[i]
     if (winner) {
-      return { ...s, lat: winner.candidate.lat, lng: winner.candidate.lng, unlocatable: false, resolvedVia: `${winner.provider}:${winner.wonBy}` }
+      return { ...s, lat: winner.candidate.lat, lng: winner.candidate.lng, unlocatable: false, resolvedVia: `${winner.provider}:${winner.wonBy}`, placeKey: cacheKey }
     }
     const reason = rateLimited ? 'rate-limited' : 'no-match'
     failures.push({ name: s.name, city: s.city, attempted, reason })
-    return { ...s, lat: null, lng: null, unlocatable: true, unlocatableReason: reason }
+    // cacheKey is still computed even on a failed geocode (it only depends on
+    // the validation anchor, not the provider result), so an unlocatable stop
+    // can still carry creator content even though it has no coordinates.
+    return { ...s, lat: null, lng: null, unlocatable: true, unlocatableReason: reason, placeKey: cacheKey }
   })
 
   if (stops.length > 0 && failures.length / stops.length > 0.2) {

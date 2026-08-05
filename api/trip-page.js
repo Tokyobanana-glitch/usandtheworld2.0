@@ -83,6 +83,12 @@ export default async function handler(req, res) {
     newerSlug: newer?.slug ?? null,
   }
 
+  // Generated fresh per-slug rather than reusing the static earth-hero.jpg
+  // directly — a link with the destination name baked into the image itself
+  // is what actually earns a click in a crowded social feed; a generic hero
+  // shot with no text doesn't tell anyone what they're clicking on.
+  const ogImageUrl = `${origin}/api/trip-og?slug=${encodeURIComponent(slug)}`
+
   const injected = `
     <title>${escapeHtml(title)}</title>
     <meta name="description" content="${escapeHtml(description)}" />
@@ -90,9 +96,13 @@ export default async function handler(req, res) {
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:url" content="${escapeHtml(url)}" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="${escapeHtml(ogImageUrl)}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}" />
     <script>window.__TRIP_DATA__ = ${JSON.stringify(tripData).replace(/</g, '\\u003c')};</script>
   </head>`
 

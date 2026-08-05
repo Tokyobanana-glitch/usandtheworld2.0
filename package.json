@@ -16,9 +16,11 @@
     "@anthropic-ai/sdk": "^0.114.0",
     "@supabase/supabase-js": "^2.111.0",
     "@vercel/oidc": "^3.8.0",
+    "@vercel/og": "^0.6.3",
     "ai": "^7.0.37",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "resend": "^4.0.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

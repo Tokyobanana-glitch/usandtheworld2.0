@@ -107,6 +107,50 @@ export async function findNewerVersion(slug) {
   return data
 }
 
+const EXPLORE_LIMIT = 60
+const EXPLORE_FETCH_POOL = 300 // over-fetched, then de-duped/filtered client-side below
+
+// Public index for /explore and sitemap.xml — every generated itinerary is
+// real, unique content tied to a real place, currently reachable only via a
+// private share link. This surfaces the best of it: one (the most recent)
+// trip per destination, itineraries only (a plain Q&A turn with no
+// day-by-day plan isn't "explore" content), newest-verified first.
+//
+// No dedicated SQL for this (no DISTINCT ON, no jsonb-array-emptiness
+// filter) — over-fetching a bounded pool and de-duping in JS is simpler to
+// reason about and cheap at this scale; revisit with a real query only if
+// the itineraries table gets large enough for that to matter.
+export async function listExploreTrips() {
+  const supabase = getSupabase()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('itineraries')
+    .select('slug, query, payload, verified_at')
+    .order('verified_at', { ascending: false })
+    .limit(EXPLORE_FETCH_POOL)
+
+  if (error) {
+    console.error('explore trips read error', error.message)
+    return []
+  }
+
+  const seenDestinations = new Set()
+  const trips = []
+  for (const row of data) {
+    const destination = row.payload?.destination
+    const dayCount = row.payload?.itinerary?.length || 0
+    if (!destination || dayCount === 0) continue
+    const key = destination.trim().toLowerCase()
+    if (seenDestinations.has(key)) continue
+    seenDestinations.add(key)
+    const stopCount = row.payload.itinerary.reduce((sum, d) => sum + (d.stops?.length || 0), 0)
+    trips.push({ slug: row.slug, destination, dayCount, stopCount, verifiedAt: row.verified_at })
+    if (trips.length >= EXPLORE_LIMIT) break
+  }
+  return trips
+}
+
 export async function saveItinerary({ query, payload, sourceSlug = null }) {
   const supabase = getSupabase()
   if (!supabase) return null

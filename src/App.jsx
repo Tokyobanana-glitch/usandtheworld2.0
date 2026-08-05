@@ -149,6 +149,22 @@ export function LegConnector({ leg }) {
   )
 }
 
+// A clip means "we've actually been here," which is a different kind of
+// trust signal than the verification chip (that's "we checked a source
+// today"). Rendered as a plain outbound link rather than an embed — an
+// embedded player per stop on a 20-stop itinerary is a real performance and
+// layout cost for a nice-to-have; a link keeps the card lightweight and
+// still gets the click.
+function CreatorClipLink({ clip }) {
+  if (!clip?.videoUrl) return null
+  return (
+    <a className="stop-creator-clip" href={clip.videoUrl} target="_blank" rel="noopener noreferrer">
+      <span className="stop-creator-clip-icon" aria-hidden="true">▶</span>
+      {clip.caption || 'Watch our clip from here'}
+    </a>
+  )
+}
+
 export function StopCard({ stop, verifiedAt }) {
   return (
     <div className={`stop-card${stop.unlocatable ? ' stop-card--unlocatable' : ''}`}>
@@ -165,6 +181,7 @@ export function StopCard({ stop, verifiedAt }) {
       {stop.why && <p className="stop-why">{stop.why}</p>}
       {stop.statusNote && <p className="stop-status-note">{stop.statusNote}</p>}
       {stop.unlocatable && <p className="stop-unlocatable-note">Location not confirmed — shown without travel time</p>}
+      <CreatorClipLink clip={stop.creatorClip} />
     </div>
   )
 }
