@@ -333,6 +333,11 @@ function App() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingPhrases, setLoadingPhrases] = useState([])
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0)
+  // Computed once at mount (not in an effect) so the video never flashes in
+  // for mobile/reduced-motion visitors who should only ever see the poster.
+  const [showHeroVideo] = useState(
+    () => !window.matchMedia?.('(max-width: 767px)').matches && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+  )
   const threadEndRef = useRef(null)
   const inputRef = useRef(null)
   const queryRef = useRef(query)
@@ -471,15 +476,15 @@ function App() {
   return (
     <main className="hero-page">
       <div className="earth-bg" aria-hidden="true">
-        <iframe
-          className="earth-video"
-          src="https://app.vidzflow.com/v/nftnkCa18x?dq=576&ap=false&muted=false&loop=false&ctp=true&bv=false&piv=false&playsinline=false&bc=%234E5FFD&controls=play-large%2Cplay%2Cprogress%2Ccurrent-time%2Cmute%2Cvolume%2Csettings%2Cfullscreen"
-          title="Cinematic_orbital_view_of_Eart_Kling_30__22432"
-          frameBorder="0"
-          scrolling="no"
-          allow="fullscreen"
-        />
+        {showHeroVideo ? (
+          <video className="earth-media" autoPlay muted loop playsInline preload="auto" poster="/earth-hero.jpg">
+            <source src="/earth-hero.mp4" type="video/mp4" />
+          </video>
+        ) : (
+          <img src="/earth-hero.jpg" alt="" className="earth-media" />
+        )}
       </div>
+      <div className="earth-overlay" aria-hidden="true" />
 
       <div className="hero-content">
         <form className="search-bar" onSubmit={handleSearch} role="search">
