@@ -1,12 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 import { getItineraryBySlug } from './_lib/itineraryStore.js'
 
-// Edge runtime, not Node: @vercel/og's ImageResponse (Satori under the hood)
-// only runs there, and it's the right fit anyway — this needs to render fast
-// on every link unfurl (Slack, iMessage, X, etc.), not spin up a full Node
-// serverless cold start.
-export const config = { runtime: 'edge' }
-
 // Satori (the engine behind ImageResponse) needs real font bytes — it can't
 // resolve @font-face/Google Fonts URLs itself. This is the standard
 // workaround for using a Google Font outside of next/font: request the
@@ -23,8 +17,10 @@ async function loadGoogleFont(family, weight) {
   return fontRes.arrayBuffer()
 }
 
-export default async function handler(req) {
-  const { searchParams, origin } = new URL(req.url)
+export default async function handler(req, res) {
+  const protocol = req.headers['x-forwarded-proto'] || 'https'
+  const origin = `${protocol}://${req.headers.host}`
+  const { searchParams } = new URL(req.url, origin)
   const slug = searchParams.get('slug')
 
   let destination = 'Us and The World'
@@ -58,7 +54,7 @@ export default async function handler(req) {
     console.error('trip-og: font load failed, falling back to system font:', err)
   }
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -111,4 +107,10 @@ export default async function handler(req) {
     ),
     { width: 1200, height: 630, fonts },
   )
+
+  res.statusCode = image.status
+  for (const [key, value] of image.headers) {
+    res.setHeader(key, value)
+  }
+  res.end(Buffer.from(await image.arrayBuffer()))
 }
