@@ -471,7 +471,14 @@ function App() {
   return (
     <main className="hero-page">
       <div className="earth-bg" aria-hidden="true">
-        <img src="/earth-hero.jpg" alt="" className="earth-img" />
+        <iframe
+          className="earth-video"
+          src="https://app.vidzflow.com/v/nftnkCa18x?dq=576&ap=false&muted=false&loop=false&ctp=true&bv=false&piv=false&playsinline=false&bc=%234E5FFD&controls=play-large%2Cplay%2Cprogress%2Ccurrent-time%2Cmute%2Cvolume%2Csettings%2Cfullscreen"
+          title="Cinematic_orbital_view_of_Eart_Kling_30__22432"
+          frameBorder="0"
+          scrolling="no"
+          allow="fullscreen"
+        />
       </div>
 
       <div className="hero-content">
