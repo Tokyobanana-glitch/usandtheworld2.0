@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     checkedCount++
     let fresh
     try {
-      fresh = await generateAnswer(trip.query, [])
+      fresh = await generateAnswer(trip.query, [], { reverifyItinerary: trip.payload.itinerary })
     } catch (err) {
       console.error(`check-watches: re-verify failed for ${slug}:`, err)
       continue

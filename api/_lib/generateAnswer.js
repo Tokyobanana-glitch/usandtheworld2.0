@@ -156,6 +156,57 @@ List the real sources you used in "sources", including whatever you used to veri
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.
 This may be an ongoing conversation — if earlier turns are included, treat the new question as a follow-up (e.g. still about the same destination or trip) unless the traveler clearly changes topic, and don't repeat details already covered.`
 
+// Used only by the re-verify path (api/trip-reverify.js, api/cron/check-watches.js)
+// instead of SYSTEM_PROMPT. The default prompt researches a trip from
+// scratch, which is exactly wrong for re-verifying one: given the same query
+// again with no memory of the saved stops, the model re-curates its own new
+// itinerary — different phrasing, different stop selection — and every
+// cosmetic difference then shows up in diffItineraries() as a fake
+// close/open. This prompt makes the model audit the specific stops it's
+// handed instead of researching the destination again.
+const REVERIFY_SYSTEM_PROMPT = `You are re-verifying a previously researched itinerary — you are auditing it, not recreating it. The traveler already has this exact plan; your only job is to check whether it's still accurate and report what genuinely changed, nothing else.
+
+You have live web search — use it to check current status (open/closed/hours/seasonal/renovation) for each stop below, exactly as you would when researching from scratch.
+
+Ground rule: KEEP every stop exactly as given — same "name", "searchName", "city", "proximity", "locality", "country", "category", "timeOfDay", "durationMinutes", "why", "priceIndicator" — unless your search finds it is now genuinely closed, demolished, or otherwise gone with no public access. Do not rewrite, rename, reword, or "improve" a stop that is still accurate — "São Bento Train Station" must come back as "São Bento Train Station", not "São Bento Railway Station"; a cosmetic rewrite of an unchanged place is a wrong answer here, not a stylistic choice. For a stop that's still there, update only its "status", "statusNote", and "sourceUrl".
+
+Only when a stop is CONFIRMED gone (status would become "closed") may you replace it — with exactly ONE specific, real, currently-open alternative you have verified via search. Never propose a choice between two options (e.g. "Confeitaria do Bolhão or Majestic Café") — that means you're brainstorming, not verifying; commit to the single best real replacement. Do not add, remove, or reorder any other stops, and do not add extra stops beyond replacing a confirmed-closed one.
+
+Everything else about how you work stays the same: use "unverified" honestly when you can't confirm current status, don't default to "open" from memory, cite a real "sourceUrl" when you have one, and do not include coordinates for any stop — the app geocodes each stop server-side from "searchName" and "city".
+
+Return the full itinerary again in the same day-by-day structure you were given, plus a fresh "answer", "bestTimeToVisit", "suggestions", "sources", and "followUps" reflecting what you found.`
+
+// Only the fields the model needs to either echo back unchanged or use to
+// verify are sent — stripping lat/lng/legs/unlocatable (server-computed,
+// meaningless to re-send) keeps this from ballooning in size or implying
+// the model should reason about coordinates it never produced.
+function buildReverifyUserMessage(query, existingItinerary) {
+  const stopsForModel = existingItinerary.map((day) => ({
+    day: day.day,
+    title: day.title,
+    stops: (day.stops || []).map((s) => ({
+      name: s.name,
+      searchName: s.searchName,
+      city: s.city,
+      proximity: s.proximity,
+      locality: s.locality,
+      country: s.country,
+      category: s.category,
+      timeOfDay: s.timeOfDay,
+      durationMinutes: s.durationMinutes,
+      why: s.why,
+      priceIndicator: s.priceIndicator,
+      previousStatus: s.status,
+    })),
+  }))
+
+  return `Original traveler question: ${query}
+
+Here is the itinerary as it was last verified. Check each stop's current status and return the itinerary again per the rules in your instructions:
+
+${JSON.stringify(stopsForModel, null, 2)}`
+}
+
 function sanitizeHistory(history) {
   if (!Array.isArray(history)) return []
   return history
@@ -168,9 +219,18 @@ function sanitizeHistory(history) {
 // (re-checking a previously saved trip) so both go through the exact same
 // generation + geocoding pipeline — a re-verify that drifted from how the
 // original was built would make the "what changed" diff meaningless.
-export async function generateAnswer(query, history = []) {
+//
+// Pass `reverifyItinerary` (the saved trip's existing `itinerary` array) to
+// switch into audit mode: REVERIFY_SYSTEM_PROMPT + the saved stops replace
+// the normal system prompt and conversation history, so the model checks
+// the specific stops it's handed instead of researching the destination
+// from scratch and silently producing a different itinerary.
+export async function generateAnswer(query, history = [], { reverifyItinerary } = {}) {
   const anthropic = await getClient()
-  const baseMessages = [...sanitizeHistory(history), { role: 'user', content: query }]
+  const isReverify = Array.isArray(reverifyItinerary) && reverifyItinerary.length > 0
+  const baseMessages = isReverify
+    ? [{ role: 'user', content: buildReverifyUserMessage(query, reverifyItinerary) }]
+    : [...sanitizeHistory(history), { role: 'user', content: query }]
   const requestParams = {
     // Haiku 4.5 answers simple fact-checks in ~10-20s and full itineraries in
     // ~30-40s — roughly 2-4x faster than Sonnet 5 here, with comparable
@@ -183,7 +243,7 @@ export async function generateAnswer(query, history = []) {
     // objects with status/statusNote/sourceUrl per stop instead of plain
     // strings) — 4096 truncated mid-JSON on a 5-day itinerary.
     max_tokens: 8192,
-    system: SYSTEM_PROMPT,
+    system: isReverify ? REVERIFY_SYSTEM_PROMPT : SYSTEM_PROMPT,
     tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
     output_config: {
       format: { type: 'json_schema', schema: ITINERARY_SCHEMA },

@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     }
     const existing = result.trip
 
-    const fresh = await generateAnswer(existing.query, [])
+    const fresh = await generateAnswer(existing.query, [], { reverifyItinerary: existing.payload.itinerary })
     const diff = diffItineraries(existing.payload, fresh)
 
     const newSlug = await saveItinerary({ query: existing.query, payload: fresh, sourceSlug: slug })
