@@ -24,6 +24,7 @@ export default function ExplorePage({ data }) {
         <div className="explore-grid">
           {trips.map((trip) => (
             <a key={trip.slug} href={`/trip/${trip.slug}`} className="explore-card">
+              {trip.destinationImage && <img src={trip.destinationImage.url} alt="" className="explore-card-image" />}
               <span className="explore-card-destination">{trip.destination}</span>
               <span className="explore-card-meta">
                 {trip.dayCount} day{trip.dayCount === 1 ? '' : 's'} · {trip.stopCount} stop{trip.stopCount === 1 ? '' : 's'}

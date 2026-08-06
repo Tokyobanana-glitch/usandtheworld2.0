@@ -23,6 +23,13 @@ const HOLD_MS = 1400
 const PAUSE_MS = 400
 const LOADING_PHRASE_MS = 2500
 
+// Used only to keep an itinerary-flavored model chip out of the regular
+// follow-up row — the promoted CTA itself is always ITINERARY_FOLLOWUP_QUESTION,
+// never sourced from a chip, so it doesn't depend on the model happening to
+// generate one. See TurnAnswer's itineraryFollowUp prop.
+const ITINERARY_FOLLOWUP_RE = /itinerary|\bday trip\b/i
+const ITINERARY_FOLLOWUP_QUESTION = 'Build me a day-by-day itinerary'
+
 const TOPIC_PREFIXES = [
   /^i want to travel to\s+/i,
   /^i want to go to\s+/i,
@@ -243,25 +250,16 @@ export function ItineraryDay({ day, verifiedAt }) {
   )
 }
 
-const SENTENCE_SPLIT = /[^.!?]+[.!?]+(\s+|$)/g
-const TRUNCATE_SENTENCE_LIMIT = 3
-
 // The itinerary is the product — long prose above it pushed the actual plan
-// below the fold. Truncated to a few sentences with an explicit expand
-// control, rather than hidden entirely.
+// below the fold. Clamped to ~4 lines via CSS (not a text-length heuristic)
+// with an explicit expand control, rather than hidden entirely.
 function TruncatedAnswer({ text }) {
   const [expanded, setExpanded] = useState(false)
   if (!text) return null
 
-  const sentences = text.match(SENTENCE_SPLIT) || [text]
-  if (sentences.length <= TRUNCATE_SENTENCE_LIMIT) {
-    return <p className="result-answer">{text}</p>
-  }
-
-  const truncated = sentences.slice(0, TRUNCATE_SENTENCE_LIMIT).join('').trim()
   return (
     <div className="truncated-answer">
-      <p className="result-answer">{expanded ? text : truncated}</p>
+      <p className={`result-answer${expanded ? '' : ' result-answer--clamped'}`}>{text}</p>
       <button type="button" className="truncate-toggle" onClick={() => setExpanded((e) => !e)}>
         {expanded ? 'Show less' : 'Read more'}
       </button>
@@ -271,15 +269,33 @@ function TruncatedAnswer({ text }) {
 
 // verifiedAt defaults to "now" for a fresh, in-thread answer (it really was
 // just checked) — TripPage passes the saved trip's actual verifiedAt instead.
-export function TurnAnswer({ result, verifiedAt }) {
+// itineraryFollowUp/onSelectFollowUp are only ever passed for the active
+// thread turn (see App()) — TripPage renders this with neither, so the CTA
+// simply doesn't appear there.
+export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFollowUp }) {
   const effectiveVerifiedAt = verifiedAt || new Date().toISOString()
   const hasItinerary = result.itinerary?.length > 0
   const summary = hasItinerary ? computeVerificationSummary(result.itinerary) : null
 
   return (
     <div className="result-details">
+      {result.destinationImage && (
+        <div className="result-destination-image">
+          <img src={result.destinationImage.url} alt={result.destination} />
+          <a href={result.destinationImage.attributionUrl} target="_blank" rel="noopener noreferrer" className="result-destination-image-credit">
+            Photo via Wikipedia
+          </a>
+        </div>
+      )}
+
       <h2>{result.destination}</h2>
       <TruncatedAnswer text={result.answer} />
+
+      {itineraryFollowUp && (
+        <button type="button" className="itinerary-cta" onClick={() => onSelectFollowUp(itineraryFollowUp)}>
+          {itineraryFollowUp}
+        </button>
+      )}
 
       {result.slug && hasItinerary && (
         <a className="share-trip-link" href={`/trip/${result.slug}`}>
@@ -355,7 +371,7 @@ function App() {
   const [showHeroVideo] = useState(
     () => !window.matchMedia?.('(max-width: 767px)').matches && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
   )
-  const threadEndRef = useRef(null)
+  const lastTurnRef = useRef(null)
   const inputRef = useRef(null)
   const queryRef = useRef(query)
 
@@ -363,8 +379,11 @@ function App() {
     queryRef.current = query
   }, [query])
 
+  // Lands on the TOP of the newest turn (destination image, overview) —
+  // not the bottom of its Sources/chips — every time the thread changes,
+  // whether that's a turn just being added or its content finishing load.
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    lastTurnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [thread])
 
   // Typewriter placeholder inviting a first search — only before a conversation starts.
@@ -489,6 +508,15 @@ function App() {
 
   const lastTurn = thread[thread.length - 1]
   const showFollowUps = lastTurn?.status === 'done' && lastTurn.result
+  const lastTurnHasItinerary = showFollowUps && lastTurn.result.itinerary?.length > 0
+  // Guaranteed, not model-dependent: shown whenever the last answer has no
+  // itinerary yet, regardless of whether the model happened to generate an
+  // itinerary-flavored follow-up chip (it often doesn't). Always the same
+  // fixed question, reusing the exact runSearch follow-up handler. Any
+  // itinerary-flavored chip the model DID generate is still filtered out of
+  // the regular row below (see ITINERARY_FOLLOWUP_RE) so it never shows twice.
+  const itineraryFollowUp = showFollowUps && !lastTurnHasItinerary ? ITINERARY_FOLLOWUP_QUESTION : null
+  const regularFollowUps = showFollowUps ? (lastTurn.result.followUps || []).filter((text) => !ITINERARY_FOLLOWUP_RE.test(text)) : []
 
   return (
     <main className="hero-page">
@@ -502,6 +530,10 @@ function App() {
         )}
       </div>
       <div className="earth-overlay" aria-hidden="true" />
+
+      <a href="/explore" className="trip-page-home-link hero-explore-link">
+        Explore trips
+      </a>
 
       <div className="hero-content">
         <form className="search-bar" onSubmit={handleSearch} role="search">
@@ -526,7 +558,7 @@ function App() {
 
         {thread.length === 0 && (
           <>
-            <p className="tagline">Discover your next adventure and share it with Usandtheworld.</p>
+            <p className="tagline">Discover your next adventure and share it with Us and The World.</p>
             <RecentTrips />
           </>
         )}
@@ -534,7 +566,7 @@ function App() {
         {thread.length > 0 && (
           <div className="result-card" role="status">
             {thread.map((turn) => (
-              <div key={turn.id} className="thread-turn">
+              <div key={turn.id} className="thread-turn" ref={turn.id === lastTurn?.id ? lastTurnRef : null}>
                 <p className="turn-question">You asked — {turn.query}</p>
                 {turn.status === 'loading' && (
                   <p className="result-loading" key={loadingPhraseIndex}>
@@ -550,13 +582,19 @@ function App() {
                     </button>
                   </div>
                 )}
-                {turn.status === 'done' && turn.result && <TurnAnswer result={turn.result} />}
+                {turn.status === 'done' && turn.result && (
+                  <TurnAnswer
+                    result={turn.result}
+                    itineraryFollowUp={turn.id === lastTurn?.id ? itineraryFollowUp : null}
+                    onSelectFollowUp={runSearch}
+                  />
+                )}
               </div>
             ))}
 
             {showFollowUps && (
               <div className="followups">
-                {lastTurn.result.followUps?.map((text, i) => (
+                {regularFollowUps.map((text, i) => (
                   <button key={i} type="button" className="followup-chip" onClick={() => runSearch(text)}>
                     {text}
                   </button>
@@ -566,8 +604,6 @@ function App() {
                 </button>
               </div>
             )}
-
-            <div ref={threadEndRef} />
 
             <button type="button" className="reset-conversation" onClick={resetConversation}>
               Start a new search

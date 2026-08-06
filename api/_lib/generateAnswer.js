@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getVercelOidcToken } from '@vercel/oidc'
 import { enrichItinerary } from './itineraryGeo.js'
+import { getDestinationImage } from './destinationImage.js'
 
 // Routes through Vercel's AI Gateway using the project's auto-refreshed OIDC
 // token — no manual API key needed. If ANTHROPIC_API_KEY is ever set (e.g. to
@@ -275,6 +276,13 @@ export async function generateAnswer(query, history = [], { reverifyItinerary } 
       console.error('itinerary geo-enrichment failed, serving ungeocoded itinerary:', geoErr)
     }
   }
+
+  // Server-side post-processing on top of the model's output, same pattern
+  // as itinerary geocoding — never ask the model itself for an image URL,
+  // it has no reliable way to know a real one. Rides along automatically
+  // with existing caching (query cache, saved itineraries, /explore) since
+  // it's just another field on the stored payload.
+  parsed.destinationImage = parsed.destination ? await getDestinationImage(parsed.destination) : null
 
   return parsed
 }

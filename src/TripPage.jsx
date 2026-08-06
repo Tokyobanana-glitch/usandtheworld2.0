@@ -82,9 +82,14 @@ export default function TripPage({ data }) {
   return (
     <main className="trip-page">
       <div className="trip-page-header">
-        <a href="/" className="trip-page-home-link">
-          ← Us and The World
-        </a>
+        <div className="trip-page-header-links">
+          <a href="/" className="trip-page-home-link">
+            ← Us and The World
+          </a>
+          <a href="/explore" className="trip-page-home-link">
+            Explore trips
+          </a>
+        </div>
         <button type="button" className="trip-copy-link" onClick={handleCopyLink}>
           {copied ? 'Link copied' : 'Copy link'}
         </button>

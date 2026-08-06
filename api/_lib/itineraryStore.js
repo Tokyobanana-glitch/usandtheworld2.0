@@ -145,7 +145,7 @@ export async function listExploreTrips() {
     if (seenDestinations.has(key)) continue
     seenDestinations.add(key)
     const stopCount = row.payload.itinerary.reduce((sum, d) => sum + (d.stops?.length || 0), 0)
-    trips.push({ slug: row.slug, destination, dayCount, stopCount, verifiedAt: row.verified_at })
+    trips.push({ slug: row.slug, destination, dayCount, stopCount, verifiedAt: row.verified_at, destinationImage: row.payload?.destinationImage || null })
     if (trips.length >= EXPLORE_LIMIT) break
   }
   return trips
