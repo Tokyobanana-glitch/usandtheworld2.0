@@ -156,7 +156,12 @@ async function fetchMatrixDurations(coords) {
 // the driving duration — a drive duration for a 400m hop is meaningless — they
 // get a straight-line-distance estimate instead, so this stays one call per
 // day rather than a second walking-profile call per leg.
-async function buildLegsForDay(orderedGeocodedStops) {
+//
+// Exported so the edit path (api/trip-edit.js) can recompute legs for a
+// traveler's manually-ordered stops without going through enrichItinerary,
+// which would re-cluster and re-order everything via k-means and discard the
+// manual edit.
+export async function buildLegsForDay(orderedGeocodedStops) {
   if (orderedGeocodedStops.length < 2) return []
 
   const matrix = await fetchMatrixDurations(orderedGeocodedStops)

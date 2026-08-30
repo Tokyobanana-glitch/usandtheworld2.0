@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     const diff = diffItineraries(trip.payload, fresh)
     if (!diff.hasChanges) continue
 
-    const newSlug = await saveItinerary({ query: trip.query, payload: fresh, sourceSlug: slug })
+    const newSlug = await saveItinerary({ query: trip.query, payload: fresh, sourceSlug: slug, revisionKind: 'reverify' })
     if (!newSlug) continue
 
     for (const watcher of rows) {

@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     const fresh = await generateAnswer(existing.query, [], { reverifyItinerary: existing.payload.itinerary })
     const diff = diffItineraries(existing.payload, fresh)
 
-    const newSlug = await saveItinerary({ query: existing.query, payload: fresh, sourceSlug: slug })
+    const newSlug = await saveItinerary({ query: existing.query, payload: fresh, sourceSlug: slug, revisionKind: 'reverify' })
     if (!newSlug) {
       res.status(502).json({ error: 'Failed to save re-verified trip' })
       return

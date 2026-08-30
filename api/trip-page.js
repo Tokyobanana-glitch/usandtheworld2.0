@@ -81,6 +81,7 @@ export default async function handler(req, res) {
     isStale,
     freshnessDays: CACHE_FRESHNESS_DAYS,
     newerSlug: newer?.slug ?? null,
+    newerRevisionKind: newer?.revision_kind ?? null,
   }
 
   // Generated fresh per-slug rather than reusing the static earth-hero.jpg

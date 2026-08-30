@@ -111,6 +111,34 @@
   text-wrap: balance;
 }
 
+.rotating-tagline {
+  position: relative;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(22px, 3.4vw, 36px);
+  line-height: 1.35;
+  color: #fff;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  max-width: 64ch;
+  min-height: 2.7em;
+}
+
+.rotating-tagline-static {
+  max-width: 34ch;
+  text-wrap: balance;
+}
+
+.rotating-tagline-line {
+  margin: 0;
+  text-wrap: balance;
+  transition: opacity 600ms ease;
+}
+
+.rotating-tagline-line-overlay {
+  position: absolute;
+  inset: 0;
+}
+
 .result-card {
   width: 100%;
   max-width: 640px;
@@ -477,6 +505,20 @@
   line-height: 1.5;
 }
 
+.stop-traveler-note {
+  font-size: 13.5px;
+  color: #c4e0ff;
+  background: rgba(96, 165, 250, 0.1);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.stop-traveler-note strong {
+  color: #93c5fd;
+}
+
 .stop-status-note {
   font-size: 12.5px;
   color: rgba(255, 255, 255, 0.55);
@@ -690,6 +732,12 @@ a.status-chip:hover {
   gap: 16px;
 }
 
+.trip-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .trip-page-home-link {
   color: rgba(255, 255, 255, 0.6);
   text-decoration: none;
@@ -897,6 +945,168 @@ a.status-chip:hover {
   margin: 8px 0 0;
   padding-left: 18px;
   line-height: 1.6;
+}
+
+/* Deliberately loud and persistent for the whole editing session — the one
+   thing a traveler must not assume is that editing touches the link they
+   already shared. */
+.trip-edit-banner {
+  background: rgba(192, 132, 252, 0.1);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 0 0 20px;
+}
+
+.trip-edit-banner p {
+  color: #d8b4fe;
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.trip-edit-day {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.trip-edit-stop {
+  margin-bottom: 10px;
+}
+
+.trip-edit-note-label {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 8px;
+}
+
+.trip-edit-note-input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f2f2f5;
+  font-size: 13.5px;
+  font-family: inherit;
+  border-radius: 6px;
+  padding: 6px 10px;
+  resize: vertical;
+}
+
+.trip-edit-stop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.trip-edit-stop-actions button,
+.trip-edit-stop-actions select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.trip-edit-stop-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.trip-edit-remove-btn {
+  color: #fca5a5 !important;
+  border-color: rgba(252, 165, 165, 0.35) !important;
+}
+
+.trip-edit-empty-day {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+}
+
+.trip-edit-add-stop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.trip-edit-add-stop input {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f2f2f5;
+  font-size: 13.5px;
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+
+.trip-edit-add-stop button {
+  background: rgba(192, 132, 252, 0.15);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #d8b4fe;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.trip-edit-add-stop-hint {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 6px 0 0;
+}
+
+.trip-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.trip-edit-save-btn {
+  background: #c084fc;
+  border: none;
+  color: #1a0b2e;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.trip-edit-save-btn:hover {
+  background: #d8b4fe;
+}
+
+.trip-edit-save-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.trip-edit-cancel-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.trip-edit-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .explore-page {

@@ -3,6 +3,7 @@ import { askTravelAssistant } from './services/travelAssistant'
 import { addRecentTrip } from './services/recentTrips'
 import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatCheckDate } from './itineraryUtils'
 import RecentTrips from './RecentTrips'
+import RotatingTagline from './RotatingTagline'
 import './App.css'
 
 const TYPEWRITER_DESTINATIONS = [
@@ -186,6 +187,11 @@ export function StopCard({ stop, verifiedAt }) {
         {stop.priceIndicator && <span className="stop-chip stop-chip--price">{stop.priceIndicator}</span>}
       </div>
       {stop.why && <p className="stop-why">{stop.why}</p>}
+      {stop.travelerNote && (
+        <p className="stop-traveler-note">
+          <strong>Your note:</strong> {stop.travelerNote}
+        </p>
+      )}
       {stop.statusNote && <p className="stop-status-note">{stop.statusNote}</p>}
       {stop.unlocatable && <p className="stop-unlocatable-note">Location not confirmed — shown without travel time</p>}
       <CreatorClipLink clip={stop.creatorClip} />
@@ -271,8 +277,11 @@ function TruncatedAnswer({ text }) {
 // just checked) — TripPage passes the saved trip's actual verifiedAt instead.
 // itineraryFollowUp/onSelectFollowUp are only ever passed for the active
 // thread turn (see App()) — TripPage renders this with neither, so the CTA
-// simply doesn't appear there.
-export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFollowUp }) {
+// simply doesn't appear there. hideItinerary lets TripPage swap in its own
+// editable itinerary view in edit mode, without losing everything else this
+// renders (hero image, answer text, verification receipt, suggestions,
+// sources).
+export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFollowUp, hideItinerary }) {
   const effectiveVerifiedAt = verifiedAt || new Date().toISOString()
   const hasItinerary = result.itinerary?.length > 0
   const summary = hasItinerary ? computeVerificationSummary(result.itinerary) : null
@@ -313,7 +322,7 @@ export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFoll
         </p>
       )}
 
-      {hasItinerary && (
+      {hasItinerary && !hideItinerary && (
         <div className="result-section result-section--hero">
           <h3>Itinerary</h3>
           {result.itinerary.map((day) => (
@@ -558,7 +567,7 @@ function App() {
 
         {thread.length === 0 && (
           <>
-            <p className="tagline">Discover your next adventure and share it with Us and The World.</p>
+            <RotatingTagline />
             <RecentTrips />
           </>
         )}

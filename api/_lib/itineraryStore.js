@@ -25,6 +25,13 @@ export { normalizeQuery }
 // Also requires an exact schema_version match, so a row saved under an older
 // payload shape falls through to a fresh regeneration instead of being
 // served as if it had fields it doesn't.
+//
+// Also requires revision_kind IS NULL — a re-verify or edit child row
+// inherits its parent's normalized_query verbatim, so without this filter a
+// forked edit (someone's manually reordered, annotated stops) could outrank
+// the original and get served to a stranger searching that same phrase.
+// Only originals are ever cache-matchable; children are only ever reached
+// via their own slug.
 export async function findCachedItinerary(rawQuery) {
   const supabase = getSupabase()
   if (!supabase) return null
@@ -37,6 +44,7 @@ export async function findCachedItinerary(rawQuery) {
     .select('slug, payload, created_at')
     .eq('normalized_query', normalized)
     .eq('schema_version', CURRENT_SCHEMA_VERSION)
+    .is('revision_kind', null)
     .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -94,7 +102,7 @@ export async function findNewerVersion(slug) {
 
   const { data, error } = await supabase
     .from('itineraries')
-    .select('slug, created_at')
+    .select('slug, created_at, revision_kind')
     .eq('source_slug', slug)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -151,7 +159,10 @@ export async function listExploreTrips() {
   return trips
 }
 
-export async function saveItinerary({ query, payload, sourceSlug = null }) {
+// revisionKind is null for an original save, 'reverify' for a re-verify
+// child, or 'edit' for a manually-edited fork — always paired with
+// sourceSlug (see trip-reverify.js and trip-edit.js), never set alone.
+export async function saveItinerary({ query, payload, sourceSlug = null, revisionKind = null }) {
   const supabase = getSupabase()
   if (!supabase) return null
 
@@ -166,6 +177,7 @@ export async function saveItinerary({ query, payload, sourceSlug = null }) {
     created_at: now,
     verified_at: now,
     source_slug: sourceSlug,
+    revision_kind: revisionKind,
   })
 
   if (error) {
