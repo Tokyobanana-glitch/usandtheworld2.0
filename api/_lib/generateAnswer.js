@@ -100,8 +100,51 @@ const ITINERARY_SCHEMA = {
                   description:
                     'Rough entry/visit cost if you found one during search, in the local format you found it, e.g. "€8", "$15", "Free". Empty string if you found no pricing information — do not guess or estimate one.',
                 },
+                estimatedCost: {
+                  description:
+                    'Structured admission/entry cost per person, ONLY when a live source confirms a specific current price — same sourcing discipline as "status". null if you cannot confirm a real current price; a wrong price is worse than no price, so do not estimate or remember one.',
+                  anyOf: [
+                    {
+                      type: 'object',
+                      properties: {
+                        amount: { type: 'number', description: 'The confirmed price as a number, 0 for free admission.' },
+                        currency: { type: 'string', description: 'Local currency code or symbol, e.g. "EUR", "$".' },
+                        note: { type: 'string', description: 'Caveat worth keeping, e.g. "free", "varies by tour", "child price shown, adult is higher". Empty string if none.' },
+                      },
+                      required: ['amount', 'currency', 'note'],
+                      additionalProperties: false,
+                    },
+                    { type: 'null' },
+                  ],
+                },
+                backup: {
+                  description:
+                    'A real, currently-open, verified nearby alternative for a stop that can genuinely fall through — outdoor/weather-dependent, reservation-required, capacity-limited, or seasonal. null for a stop that cannot realistically fail; do not invent a backup for every stop.',
+                  anyOf: [
+                    {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        city: { type: 'string' },
+                        why: { type: 'string', description: 'Why this is a solid real alternative, specific to this stop.' },
+                      },
+                      required: ['name', 'city', 'why'],
+                      additionalProperties: false,
+                    },
+                    { type: 'null' },
+                  ],
+                },
+                crowdLevel: {
+                  type: 'string',
+                  enum: ['local-favorite', 'popular-but-worth-it', 'tourist-heavy'],
+                  description: 'The "skip the tourist trap" signal — a character judgment, separate from verification status.',
+                },
               },
-              required: ['name', 'searchName', 'city', 'proximity', 'locality', 'country', 'category', 'timeOfDay', 'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl', 'priceIndicator'],
+              required: [
+                'name', 'searchName', 'city', 'proximity', 'locality', 'country', 'category', 'timeOfDay',
+                'durationMinutes', 'why', 'status', 'statusNote', 'sourceUrl', 'priceIndicator',
+                'estimatedCost', 'backup', 'crowdLevel',
+              ],
               additionalProperties: false,
             },
           },
@@ -109,6 +152,48 @@ const ITINERARY_SCHEMA = {
         required: ['day', 'title', 'stops'],
         additionalProperties: false,
       },
+    },
+    estimatedDailyCost: {
+      description:
+        'Trip-level representative single-day cost, built from confirmed per-stop "estimatedCost" figures. null when there is no day-by-day itinerary.',
+      anyOf: [
+        {
+          type: 'object',
+          properties: {
+            amount: { type: 'number' },
+            currency: { type: 'string' },
+            confidence: {
+              type: 'string',
+              enum: ['estimated', 'partial'],
+              description: '"estimated" only when every included stop\'s cost was confirmed; "partial" when one or more stops had a null estimatedCost and were excluded from the sum.',
+            },
+          },
+          required: ['amount', 'currency', 'confidence'],
+          additionalProperties: false,
+        },
+        { type: 'null' },
+      ],
+    },
+    estimatedTotalCost: {
+      description:
+        'Trip-level total cost across the whole itinerary, built from confirmed per-stop "estimatedCost" figures. null when there is no day-by-day itinerary.',
+      anyOf: [
+        {
+          type: 'object',
+          properties: {
+            amount: { type: 'number' },
+            currency: { type: 'string' },
+            confidence: {
+              type: 'string',
+              enum: ['estimated', 'partial'],
+              description: '"estimated" only when every included stop\'s cost was confirmed; "partial" when one or more stops had a null estimatedCost and were excluded from the sum.',
+            },
+          },
+          required: ['amount', 'currency', 'confidence'],
+          additionalProperties: false,
+        },
+        { type: 'null' },
+      ],
     },
     sources: {
       type: 'array',
@@ -129,7 +214,7 @@ const ITINERARY_SCHEMA = {
       items: { type: 'string' },
     },
   },
-  required: ['destination', 'answer', 'bestTimeToVisit', 'suggestions', 'itinerary', 'sources', 'followUps'],
+  required: ['destination', 'answer', 'bestTimeToVisit', 'suggestions', 'itinerary', 'sources', 'followUps', 'estimatedDailyCost', 'estimatedTotalCost'],
   additionalProperties: false,
 }
 
@@ -145,6 +230,12 @@ For every itinerary stop, put the verification work directly into that stop's "s
 
 Always cite a real "sourceUrl" for a stop's status when you have one — the app treats a status with no source as unverified regardless of what you put in "status", so an unsupported claim gets no credit for looking confident. Fill in "priceIndicator" only when you actually found pricing during search; leave it empty rather than estimate.
 
+Set "estimatedCost" with that same discipline, applied to admission/entry price per person: only when a live source confirms a specific current price, return { amount, currency, note } — amount is that confirmed number (0 for free admission), currency is the local currency code or symbol, and note carries any caveat worth keeping ("free", "varies by tour", "child price shown, adult is higher"). If you cannot confirm a real current price via search, return null for the whole field rather than a remembered or estimated figure — a wrong price is worse than no price, exactly as with "status".
+
+Set "backup" only for a stop that can genuinely fall through — outdoor or weather-dependent, reservation-required, capacity-limited, or seasonal. Leave it null for a stop that can't realistically fail (a public square, a walkable neighborhood, most reservation-free restaurants) — inventing a backup for every stop defeats the point. Backups exist because places close and plans break: when you do set one, it must be a real, currently-open alternative you've verified via search, near the same location — never a generic suggestion pulled from memory. If the stop's own "status" is "closed" or "seasonal", its backup matters more (the traveler will actually need it) and deserves extra care in choosing a genuinely solid nearby alternative.
+
+Set "crowdLevel" to "local-favorite" (mostly locals, off the standard tourist path), "popular-but-worth-it" (well-known and busy but earns the visit), or "tourist-heavy" (crowded, largely tourist-oriented, worth knowing before committing the time) — this is the traveler's "skip the tourist trap" signal, a separate axis from whether the place is verified open.
+
 "name" and "searchName" serve different jobs — do not conflate them. "name" is what the traveler reads and can carry a clarifying qualifier ("Catedral de Santiago (Santiago Cathedral)"). "searchName" is only ever fed to a map search, so it must be the bare official/local-language name with nothing else attached — no parentheses, no "aka", no English translation tacked on, no descriptive suffix like "- Parish & Ruins". An English name for a place that locals and maps refer to by a different name is the single most common way a search fails outright: default to the local-language name in "searchName" whenever the place is not itself an English-named place, even if "name" stays in English for the traveler.
 
 Set "proximity" honestly per stop: "in-city" for anything inside the destination town/city itself, "day-trip" for a genuine excursion outside it (a volcano hike, a lake, a nearby countryside or coastal trip). This is load-bearing, not decorative — it controls how far from the city center a match is allowed to be before the app rejects it as wrong. Marking a real day trip as "in-city" will cause the app to throw out a correct result as "too far away."
@@ -152,6 +243,10 @@ Set "proximity" honestly per stop: "in-city" for anything inside the destination
 Set "locality" to the actual town/city the stop physically sits in — for an in-city stop this is always the same as "city"; for a day-trip stop it is usually a DIFFERENT, specific place, and you already know what it is (a trip based in Kyoto that visits Todai-ji has city="Kyoto" but locality="Nara", because that's where Todai-ji actually is — never just repeat "city" for a day-trip stop out of laziness). This is also load-bearing: it's how the app confirms a day-trip match landed in the right town instead of a same-named place somewhere else entirely.
 
 Set "country" to the plain country name "locality" is actually in, e.g. "Japan", "Guatemala", "Spain" — not a code. Many town/city names exist in more than one country (Valencia in Spain and in Venezuela, Santiago in Chile and Cuba and Spain, San José in Costa Rica and California, Antigua the Guatemalan colonial city and Antigua the Caribbean island) and this is the field that tells the app which one you mean, before it ever calls a map. Get this right even when it feels obvious from context — the app cannot infer it from "locality" alone.
+
+At the trip level, set "estimatedDailyCost" and "estimatedTotalCost" as { amount, currency, confidence }, built from the confirmed per-stop "estimatedCost" figures — daily as a representative single day's total, total across the whole trip. Set "confidence" to "estimated" only when every included stop's cost could be confirmed, and "partial" when one or more stops returned a null "estimatedCost" and were therefore excluded from the sum — never present a partial total as if it covered the whole trip. Return null for both when there is no day-by-day itinerary.
+
+If the traveler stated a budget, choose stops that actually fit within it. When you deliberately pick a cheaper stop over a notable, more obvious alternative specifically to stay within that budget, say so plainly in that stop's "statusNote" (e.g. "chosen over the pricier X to fit your stated budget") rather than silently swapping with no explanation.
 
 List the real sources you used in "sources", including whatever you used to verify current status.
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.
@@ -169,9 +264,11 @@ const REVERIFY_SYSTEM_PROMPT = `You are re-verifying a previously researched iti
 
 You have live web search — use it to check current status (open/closed/hours/seasonal/renovation) for each stop below, exactly as you would when researching from scratch.
 
-Ground rule: KEEP every stop exactly as given — same "name", "searchName", "city", "proximity", "locality", "country", "category", "timeOfDay", "durationMinutes", "why", "priceIndicator" — unless your search finds it is now genuinely closed, demolished, or otherwise gone with no public access. Do not rewrite, rename, reword, or "improve" a stop that is still accurate — "São Bento Train Station" must come back as "São Bento Train Station", not "São Bento Railway Station"; a cosmetic rewrite of an unchanged place is a wrong answer here, not a stylistic choice. For a stop that's still there, update only its "status", "statusNote", and "sourceUrl".
+Ground rule: KEEP every stop exactly as given — same "name", "searchName", "city", "proximity", "locality", "country", "category", "timeOfDay", "durationMinutes", "why", "priceIndicator", "crowdLevel" — unless your search finds it is now genuinely closed, demolished, or otherwise gone with no public access. Do not rewrite, rename, reword, or "improve" a stop that is still accurate — "São Bento Train Station" must come back as "São Bento Train Station", not "São Bento Railway Station"; a cosmetic rewrite of an unchanged place is a wrong answer here, not a stylistic choice. For a stop that's still there, update only its "status", "statusNote", and "sourceUrl".
 
 Only when a stop is CONFIRMED gone (status would become "closed") may you replace it — with exactly ONE specific, real, currently-open alternative you have verified via search. Never propose a choice between two options (e.g. "Confeitaria do Bolhão or Majestic Café") — that means you're brainstorming, not verifying; commit to the single best real replacement. Do not add, remove, or reorder any other stops, and do not add extra stops beyond replacing a confirmed-closed one.
+
+Also re-check each stop's "estimatedCost" the same way you check "status" — prices change, so search again rather than assume the previousEstimatedCost shown below still holds; if you can no longer confirm a specific current price, return null. If a stop's status is now "closed" or "seasonal", its "backup" matters more than when it was open — search for and provide a real, currently-open, verified alternative, replacing the previousBackup shown below if it no longer holds; if the stop is unchanged and still open, keep its previousBackup as given unless you have real reason to doubt it. Keep "crowdLevel" exactly as given above — it's a character judgment, not a live fact to re-check.
 
 Everything else about how you work stays the same: use "unverified" honestly when you can't confirm current status, don't default to "open" from memory, cite a real "sourceUrl" when you have one, and do not include coordinates for any stop — the app geocodes each stop server-side from "searchName" and "city".
 
@@ -197,7 +294,10 @@ function buildReverifyUserMessage(query, existingItinerary) {
       durationMinutes: s.durationMinutes,
       why: s.why,
       priceIndicator: s.priceIndicator,
+      crowdLevel: s.crowdLevel,
       previousStatus: s.status,
+      previousEstimatedCost: s.estimatedCost,
+      previousBackup: s.backup,
     })),
   }))
 

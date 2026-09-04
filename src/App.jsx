@@ -173,7 +173,29 @@ function CreatorClipLink({ clip }) {
   )
 }
 
+const CROWD_LABELS = {
+  'local-favorite': 'Local favorite',
+  'popular-but-worth-it': 'Popular',
+  'tourist-heavy': 'Tourist-heavy',
+}
+
+// Shared by the per-stop estimatedCost chip and the trip-level total —
+// currency arrives as either a symbol ("€", "$") or a code ("EUR"), never
+// normalized server-side, so this branches on whether it looks alphanumeric
+// rather than maintaining a currency lookup table.
+function formatMoney(amount, currency) {
+  if (amount === 0) return 'Free'
+  const rounded = Math.round(amount * 100) / 100
+  const isSymbol = currency && /^[^A-Za-z0-9]/.test(currency)
+  return isSymbol ? `${currency}${rounded}` : `${rounded}${currency ? ` ${currency}` : ''}`
+}
+
 export function StopCard({ stop, verifiedAt }) {
+  // A backup only carries real weight once the primary stop can no longer be
+  // relied on — that's the one moment it should already be open rather than
+  // making the traveler dig for it.
+  const backupLoadBearing = stop.status === 'closed' || stop.status === 'seasonal'
+
   return (
     <div className={`stop-card${stop.unlocatable ? ' stop-card--unlocatable' : ''}`}>
       <div className="stop-card-header">
@@ -185,6 +207,14 @@ export function StopCard({ stop, verifiedAt }) {
         {stop.timeOfDay && <span className="stop-chip">{stop.timeOfDay}</span>}
         {stop.durationMinutes ? <span className="stop-chip">~{stop.durationMinutes} min</span> : null}
         {stop.priceIndicator && <span className="stop-chip stop-chip--price">{stop.priceIndicator}</span>}
+        {stop.estimatedCost && (
+          <span className="stop-chip stop-chip--price" title={stop.estimatedCost.note || undefined}>
+            {formatMoney(stop.estimatedCost.amount, stop.estimatedCost.currency)}
+          </span>
+        )}
+        {stop.crowdLevel && (
+          <span className={`crowd-chip crowd-chip--${stop.crowdLevel}`}>{CROWD_LABELS[stop.crowdLevel] || stop.crowdLevel}</span>
+        )}
       </div>
       {stop.why && <p className="stop-why">{stop.why}</p>}
       {stop.travelerNote && (
@@ -195,6 +225,14 @@ export function StopCard({ stop, verifiedAt }) {
       {stop.statusNote && <p className="stop-status-note">{stop.statusNote}</p>}
       {stop.unlocatable && <p className="stop-unlocatable-note">Location not confirmed — shown without travel time</p>}
       <CreatorClipLink clip={stop.creatorClip} />
+      {stop.backup && (
+        <details className="stop-backup" open={backupLoadBearing}>
+          <summary>If this doesn't work out</summary>
+          <p className="stop-backup-body">
+            <strong>{stop.backup.name}</strong> ({stop.backup.city}) — {stop.backup.why}
+          </p>
+        </details>
+      )}
     </div>
   )
 }
@@ -325,6 +363,14 @@ export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFoll
       {hasItinerary && !hideItinerary && (
         <div className="result-section result-section--hero">
           <h3>Itinerary</h3>
+          {result.estimatedTotalCost && (
+            <p className="trip-cost-summary">
+              Estimated total: {formatMoney(result.estimatedTotalCost.amount, result.estimatedTotalCost.currency)}
+              {result.estimatedTotalCost.confidence === 'partial' && (
+                <span className="trip-cost-partial"> (partial — some stops' costs couldn't be confirmed)</span>
+              )}
+            </p>
+          )}
           {result.itinerary.map((day) => (
             <ItineraryDay key={day.day} day={day} verifiedAt={effectiveVerifiedAt} />
           ))}

@@ -12,7 +12,10 @@ export const CACHE_FRESHNESS_DAYS = 14
 // values, etc). It gates CACHE-MATCHING ONLY — see findCachedItinerary below.
 // It must never gate getItineraryBySlug: a saved trip stays exactly as it
 // was saved regardless of which schema version produced it.
-export const CURRENT_SCHEMA_VERSION = 1
+// v2: added per-stop estimatedCost/backup/crowdLevel and trip-level
+// estimatedDailyCost/estimatedTotalCost — bumped so a pre-v2 cached row
+// (missing these fields) is never served as if it were complete.
+export const CURRENT_SCHEMA_VERSION = 2
 
 export { normalizeQuery }
 
