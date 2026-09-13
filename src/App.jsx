@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { askTravelAssistant } from './services/travelAssistant'
 import { addRecentTrip } from './services/recentTrips'
 import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatCheckDate } from './itineraryUtils'
 import RecentTrips from './RecentTrips'
 import RotatingTagline from './RotatingTagline'
+import DiscoverFeed from './DiscoverFeed'
 import './App.css'
 
 const TYPEWRITER_DESTINATIONS = [
@@ -574,6 +576,7 @@ function App() {
   const regularFollowUps = showFollowUps ? (lastTurn.result.followUps || []).filter((text) => !ITINERARY_FOLLOWUP_RE.test(text)) : []
 
   return (
+    <>
     <main className="hero-page">
       <div className="earth-bg" aria-hidden="true">
         {showHeroVideo ? (
@@ -586,9 +589,9 @@ function App() {
       </div>
       <div className="earth-overlay" aria-hidden="true" />
 
-      <a href="/explore" className="trip-page-home-link hero-explore-link">
+      <Link to="/explore" className="trip-page-home-link hero-explore-link">
         Explore trips
-      </a>
+      </Link>
 
       <div className="hero-content">
         <form className="search-bar" onSubmit={handleSearch} role="search">
@@ -667,6 +670,13 @@ function App() {
         )}
       </div>
     </main>
+    {/* Deliberately OUTSIDE .hero-page: that container's video background is
+        absolutely positioned to fill it, so anything added inside would
+        stretch the video over a much taller page. This lives below the
+        fold, in normal flow, with its own solid background — and only on
+        the landing state, matching where <RecentTrips> also hides. */}
+    {thread.length === 0 && <DiscoverFeed />}
+    </>
   )
 }
 

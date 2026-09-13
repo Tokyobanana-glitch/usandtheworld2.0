@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
 }
@@ -5,8 +7,32 @@ function formatDate(iso) {
 // Deliberately a plain list, not the chat UI — this page exists to be
 // crawled and linked into from search, where a scannable index beats a
 // conversational interface.
+//
+// Two ways to reach this component: a direct/crawler load of /explore hits
+// api/explore-page.js, which injects window.__EXPLORE_DATA__ and is passed
+// in as `data` — hydrate that immediately, never re-fetch (see main.jsx).
+// Reached instead via the Explore tab's client-side route, `data` is
+// undefined, so fetch the same underlying list from api/explore-data.js.
 export default function ExplorePage({ data }) {
-  const trips = data?.trips || []
+  const [trips, setTrips] = useState(data?.trips || [])
+  const [loading, setLoading] = useState(!data)
+
+  useEffect(() => {
+    if (data) return
+    let cancelled = false
+    fetch('/api/explore-data')
+      .then((res) => res.json())
+      .then((body) => {
+        if (!cancelled) setTrips(body.trips || [])
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [data])
 
   return (
     <main className="explore-page">
@@ -18,7 +44,9 @@ export default function ExplorePage({ data }) {
         <p className="explore-subtitle">Real day-by-day itineraries, checked against live sources — not generic AI guesses.</p>
       </div>
 
-      {trips.length === 0 ? (
+      {loading ? (
+        <p className="explore-empty">Loading verified trips…</p>
+      ) : trips.length === 0 ? (
         <p className="explore-empty">No verified trips yet — search for a destination on the homepage to start one.</p>
       ) : (
         <div className="explore-grid">

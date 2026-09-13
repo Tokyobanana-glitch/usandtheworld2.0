@@ -1270,4 +1270,197 @@ a.status-chip:hover {
   .hero-content {
     gap: 24px;
   }
+
+  /* Tap targets at least 44px on a phone — these controls are sized for a
+     mouse cursor by default and stay that way on desktop; only the mobile
+     breakpoint grows them. */
+  .clear-icon,
+  .recent-trip-remove,
+  .trips-page-remove,
+  .truncate-toggle,
+  .result-empty-retry,
+  .followup-chip,
+  .reset-conversation,
+  .trip-copy-link,
+  .trip-check-changes-btn,
+  .trip-reverify-quiet-btn,
+  .trip-edit-save-btn,
+  .trip-edit-cancel-btn,
+  .trip-edit-stop-actions button,
+  .trip-edit-stop-actions select,
+  .trip-edit-add-stop button,
+  .tab-bar-item {
+    min-height: 44px;
+  }
+
+  .trip-edit-stop-actions button,
+  .trip-edit-stop-actions select,
+  .clear-icon,
+  .recent-trip-remove,
+  .trips-page-remove {
+    min-width: 44px;
+  }
+
+  .trip-page-header {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+}
+
+/* App shell: the bottom tab bar + whatever tab is currently mounted. Only
+   ever wraps the client-routed tabs (Discover/Trips/Explore) — a trip
+   detail page is a drill-in destination, not a tab, and stays outside this
+   shell entirely (see Layout.jsx). */
+.app-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Reserves room for the fixed tab bar so page content never sits behind it.
+   Removed on desktop, where the tab bar itself is hidden. */
+@media (max-width: 767px) {
+  .app-shell {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+}
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: rgba(8, 10, 20, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  /* Safe-area inset folds into the bar's own height rather than sitting
+     below it, so the tap targets stay flush with the bar's visible top edge
+     on a device with a home-indicator gesture bar. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+}
+
+.tab-bar-item--active {
+  color: #c084fc;
+}
+
+.tab-bar-label {
+  font-size: 11px;
+}
+
+/* The bottom tab bar is a mobile navigation pattern — desktop keeps the
+   existing layout (top-of-page links, no reserved shell padding) exactly as
+   it was before this feature. */
+@media (min-width: 768px) {
+  .tab-bar {
+    display: none;
+  }
+
+  .app-shell {
+    padding-bottom: 0;
+  }
+}
+
+.trips-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+  color: #f2f2f5;
+}
+
+.trips-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trips-page-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.trips-page-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #f2f2f5;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.trips-page-destination {
+  font-family: var(--serif);
+  font-size: 17px;
+  color: #fff;
+}
+
+.trips-page-date {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.trips-page-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.trips-page-remove:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Lives OUTSIDE .hero-page on purpose — see App.jsx. Own solid background
+   matching .hero-page's so the seam between hero and feed is invisible. */
+.discover-feed {
+  background: #050813;
+  padding: 8px 20px 64px;
+}
+
+.discover-feed-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.discover-feed-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  color: #fff;
+  margin: 0 0 16px;
+}
+
+.discover-feed-see-all {
+  display: inline-block;
+  margin-top: 20px;
+  color: #c084fc;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.discover-feed-see-all:hover {
+  text-decoration: underline;
 }

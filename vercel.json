@@ -2,7 +2,8 @@
   "rewrites": [
     { "source": "/trip/:slug", "destination": "/api/trip-page?slug=:slug" },
     { "source": "/explore", "destination": "/api/explore-page" },
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/trips", "destination": "/index.html" }
   ],
   "crons": [
     { "path": "/api/cron/check-watches", "schedule": "0 14 * * *" }
