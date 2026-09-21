@@ -9,13 +9,19 @@ import { getSupabase } from './supabase.js'
 //
 // Missing/failed lookups degrade silently to "no clip" — this is enrichment,
 // never something that should be able to break itinerary generation.
+// placeKey is now also traveler-facing (Phase 2, overnight build): the
+// Bucket List tab matches a saved place against an itinerary stop by this
+// exact same identity key (see src/services/quickSaves.js and StopCard's
+// isOnBucketList prop), so it has to survive into the API response and the
+// saved payload, not just this function's own internal clip lookup. It's a
+// plain normalized string ("eiffel tower|paris|fr") — nothing sensitive.
 export async function attachCreatorClips(days) {
   const supabase = getSupabase()
-  if (!supabase) return stripPlaceKeys(days)
+  if (!supabase) return days
 
   const keys = new Set()
   days.forEach((day) => day.stops.forEach((stop) => stop.placeKey && keys.add(stop.placeKey)))
-  if (keys.size === 0) return stripPlaceKeys(days)
+  if (keys.size === 0) return days
 
   let clipsByKey = new Map()
   try {
@@ -24,27 +30,16 @@ export async function attachCreatorClips(days) {
     clipsByKey = new Map(data.map((row) => [row.cache_key, { videoUrl: row.video_url, caption: row.caption }]))
   } catch (err) {
     console.error('creator_clips lookup failed, serving itinerary without clips:', err)
-    return stripPlaceKeys(days)
+    return days
   }
 
-  if (clipsByKey.size === 0) return stripPlaceKeys(days)
+  if (clipsByKey.size === 0) return days
 
   return days.map((day) => ({
     ...day,
     stops: day.stops.map((stop) => {
       const clip = stop.placeKey ? clipsByKey.get(stop.placeKey) : null
-      const { placeKey: _placeKey, ...rest } = stop
-      return clip ? { ...rest, creatorClip: clip } : rest
+      return clip ? { ...stop, creatorClip: clip } : stop
     }),
-  }))
-}
-
-// placeKey is an internal identity key, not traveler-facing data — strip it
-// before the itinerary ever reaches an API response even when there's no
-// Supabase configured or no clips matched.
-function stripPlaceKeys(days) {
-  return days.map((day) => ({
-    ...day,
-    stops: day.stops.map(({ placeKey: _placeKey, ...rest }) => rest),
   }))
 }

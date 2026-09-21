@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { askTravelAssistant } from './services/travelAssistant'
 import { addRecentTrip } from './services/recentTrips'
+import { useBucketListQuickSave } from './hooks/useBucketListPlaceKeys'
 import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatCheckDate } from './itineraryUtils'
 import RecentTrips from './RecentTrips'
 import RotatingTagline from './RotatingTagline'
@@ -193,11 +194,19 @@ function formatMoney(amount, currency) {
   return isSymbol ? `${currency}${rounded}` : `${rounded}${currency ? ` ${currency}` : ''}`
 }
 
-export function StopCard({ stop, verifiedAt }) {
+// onSaveToBucketList/bucketListStatus/onRequestSignIn are all optional —
+// TripPage.jsx and App.jsx's live search both pass them (see
+// hooks/useBucketListPlaceKeys.js and services/quickSaves.js), but every
+// other renderer of a bare StopCard (none currently, but nothing enforces
+// that) still works with none of it: no badge, no action, unchanged from
+// before this feature existed.
+export function StopCard({ stop, verifiedAt, isOnBucketList, bucketListStatus, onSaveToBucketList }) {
   // A backup only carries real weight once the primary stop can no longer be
   // relied on — that's the one moment it should already be open rather than
   // making the traveler dig for it.
   const backupLoadBearing = stop.status === 'closed' || stop.status === 'seasonal'
+  const savingThis = bucketListStatus === 'saving'
+  const justSaved = bucketListStatus === 'saved'
 
   return (
     <div className={`stop-card${stop.unlocatable ? ' stop-card--unlocatable' : ''}`}>
@@ -218,7 +227,18 @@ export function StopCard({ stop, verifiedAt }) {
         {stop.crowdLevel && (
           <span className={`crowd-chip crowd-chip--${stop.crowdLevel}`}>{CROWD_LABELS[stop.crowdLevel] || stop.crowdLevel}</span>
         )}
+        {(isOnBucketList || justSaved) && <span className="stop-chip stop-chip--bucket-list">On your bucket list</span>}
       </div>
+      {onSaveToBucketList && stop.placeKey && !isOnBucketList && !justSaved && (
+        <button
+          type="button"
+          className="stop-save-bucket-list"
+          onClick={() => onSaveToBucketList(stop)}
+          disabled={savingThis}
+        >
+          {savingThis ? 'Saving…' : '+ Save to bucket list'}
+        </button>
+      )}
       {stop.why && <p className="stop-why">{stop.why}</p>}
       {stop.travelerNote && (
         <p className="stop-traveler-note">
@@ -244,7 +264,7 @@ export function StopCard({ stop, verifiedAt }) {
 // this change) may still have `activities: [string]` instead of `stops:
 // [object]` — checked right here via `day.stops` presence, so a mixed-shape
 // thread never crashes.
-export function ItineraryDay({ day, verifiedAt }) {
+export function ItineraryDay({ day, verifiedAt, bucketListKeys, bucketListSaveStatus, onSaveToBucketList }) {
   if (!day.stops) {
     return (
       <div className="itinerary-day">
@@ -288,7 +308,13 @@ export function ItineraryDay({ day, verifiedAt }) {
       <div className="stop-list">
         {day.stops.map((stop, i) => (
           <div key={i}>
-            <StopCard stop={stop} verifiedAt={verifiedAt} />
+            <StopCard
+              stop={stop}
+              verifiedAt={verifiedAt}
+              isOnBucketList={stop.placeKey ? bucketListKeys?.has(stop.placeKey) : false}
+              bucketListStatus={stop.placeKey ? bucketListSaveStatus?.[stop.placeKey] : undefined}
+              onSaveToBucketList={onSaveToBucketList}
+            />
             {legByFromIndex.has(i) && <LegConnector leg={legByFromIndex.get(i)} />}
           </div>
         ))}
@@ -322,7 +348,16 @@ function TruncatedAnswer({ text }) {
 // editable itinerary view in edit mode, without losing everything else this
 // renders (hero image, answer text, verification receipt, suggestions,
 // sources).
-export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onItineraryCta, hideItinerary }) {
+export function TurnAnswer({
+  result,
+  verifiedAt,
+  itineraryFollowUp,
+  onItineraryCta,
+  hideItinerary,
+  bucketListKeys,
+  bucketListSaveStatus,
+  onSaveToBucketList,
+}) {
   const effectiveVerifiedAt = verifiedAt || new Date().toISOString()
   const hasItinerary = result.itinerary?.length > 0
   const summary = hasItinerary ? computeVerificationSummary(result.itinerary) : null
@@ -375,7 +410,14 @@ export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onItineraryC
             </p>
           )}
           {result.itinerary.map((day) => (
-            <ItineraryDay key={day.day} day={day} verifiedAt={effectiveVerifiedAt} />
+            <ItineraryDay
+              key={day.day}
+              day={day}
+              verifiedAt={effectiveVerifiedAt}
+              bucketListKeys={bucketListKeys}
+              bucketListSaveStatus={bucketListSaveStatus}
+              onSaveToBucketList={onSaveToBucketList}
+            />
           ))}
         </div>
       )}
@@ -418,6 +460,7 @@ export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onItineraryC
 }
 
 function App() {
+  const { bucketListKeys, bucketListSaveStatus, onSaveToBucketList } = useBucketListQuickSave()
   const [query, setQuery] = useState('')
   const [placeholder, setPlaceholder] = useState('Where do you want to go?')
   const [thread, setThread] = useState([]) // { id, query, status, result?, message? }
@@ -687,6 +730,9 @@ function App() {
                     result={turn.result}
                     itineraryFollowUp={turn.id === lastTurn?.id ? itineraryFollowUp : null}
                     onItineraryCta={handleItineraryCta}
+                    bucketListKeys={bucketListKeys}
+                    bucketListSaveStatus={bucketListSaveStatus}
+                    onSaveToBucketList={onSaveToBucketList}
                   />
                 )}
               </div>

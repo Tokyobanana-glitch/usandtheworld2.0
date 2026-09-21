@@ -2161,3 +2161,136 @@ a.status-chip:hover {
   border-radius: 50%;
   color: rgba(255, 255, 255, 0.85);
 }
+
+/* Phase 2 (overnight build) — tab cross-links: Bucket List <-> itinerary
+   stops, Travel -> Passport, Bucket List -> Passport. See StopCard/
+   TripPage.jsx/BucketListPage.jsx and services/quickSaves.js. */
+.stop-chip--bucket-list {
+  color: #1a0b2e;
+  background: #c084fc;
+  font-weight: 600;
+}
+
+.stop-save-bucket-list {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  margin-top: 8px;
+  background: none;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #c084fc;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.stop-save-bucket-list:hover {
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.stop-save-bucket-list:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.trip-passport-panel {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.trip-passport-intro {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 12px;
+}
+
+.trip-passport-stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.trip-passport-day-label {
+  display: block;
+  font-family: var(--serif);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 4px;
+}
+
+.trip-passport-stop-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  color: #f2f2f5;
+}
+
+.trip-passport-stop-check input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.trip-passport-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.trip-passport-cancel {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.trip-passport-confirmation {
+  font-size: 14px;
+  color: rgba(242, 242, 245, 0.9);
+  margin: 0;
+}
+
+.trip-passport-confirmation a {
+  color: #c084fc;
+}
+
+.bucket-list-mark-visited {
+  flex-shrink: 0;
+  min-height: 36px;
+  background: none;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #c084fc;
+  font-size: 12.5px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bucket-list-mark-visited:hover {
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.bucket-list-mark-visited:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bucket-list-item-visited {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: #c084fc;
+  white-space: nowrap;
+}

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { TurnAnswer } from './App'
 import { addRecentTrip } from './services/recentTrips'
+import { useAuth } from './AuthContext'
+import { useBucketListQuickSave } from './hooks/useBucketListPlaceKeys'
+import { createPassportEntryFromPlace } from './services/quickSaves'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
@@ -15,7 +18,13 @@ function pluralize(n, word) {
 // scrolling conversation. Reads window.__TRIP_DATA__, injected server-side
 // by api/trip-page.js so share previews (OG tags) work before any JS runs.
 export default function TripPage({ data }) {
+  const { user, requestSignIn } = useAuth()
+  const { bucketListKeys, bucketListSaveStatus, onSaveToBucketList } = useBucketListQuickSave()
   const [current, setCurrent] = useState(data)
+  const [showPassportPanel, setShowPassportPanel] = useState(false)
+  const [passportChecks, setPassportChecks] = useState({}) // "dayIdx-stopIdx" -> boolean
+  const [savingPassport, setSavingPassport] = useState(false)
+  const [passportSavedCount, setPassportSavedCount] = useState(null)
   const [reverifying, setReverifying] = useState(false)
   const [reverifyError, setReverifyError] = useState(null)
   const [diff, setDiff] = useState(null)
@@ -54,6 +63,48 @@ export default function TripPage({ data }) {
     } finally {
       setReverifying(false)
     }
+  }
+
+  // "I went on this trip" -> Passport. All stops default to checked; the
+  // traveler unticks whatever they actually skipped before confirming.
+  // Carries over lat/lng/name/city only — no photos, matches the brief.
+  function handleOpenPassportPanel() {
+    if (!user) {
+      requestSignIn()
+      return
+    }
+    const checks = {}
+    current.payload.itinerary.forEach((day, dayIdx) => {
+      day.stops.forEach((_, stopIdx) => {
+        checks[`${dayIdx}-${stopIdx}`] = true
+      })
+    })
+    setPassportChecks(checks)
+    setPassportSavedCount(null)
+    setShowPassportPanel(true)
+  }
+
+  function togglePassportCheck(key) {
+    setPassportChecks((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  async function handleConfirmPassport() {
+    setSavingPassport(true)
+    let saved = 0
+    for (const [dayIdx, day] of current.payload.itinerary.entries()) {
+      for (const [stopIdx, stop] of day.stops.entries()) {
+        if (!passportChecks[`${dayIdx}-${stopIdx}`]) continue
+        const entry = await createPassportEntryFromPlace(user.id, {
+          name: stop.name,
+          city: stop.city,
+          lat: stop.unlocatable ? null : stop.lat,
+          lng: stop.unlocatable ? null : stop.lng,
+        })
+        if (entry) saved++
+      }
+    }
+    setSavingPassport(false)
+    setPassportSavedCount(saved)
   }
 
   function handleCopyLink() {
@@ -188,11 +239,59 @@ export default function TripPage({ data }) {
               Edit this trip
             </button>
           )}
+          {!editing && (
+            <button type="button" className="trip-copy-link" onClick={handleOpenPassportPanel}>
+              I went on this trip
+            </button>
+          )}
           <button type="button" className="trip-copy-link" onClick={handleCopyLink}>
             {copied ? 'Link copied' : 'Copy link'}
           </button>
         </div>
       </div>
+
+      {showPassportPanel && (
+        <div className="trip-passport-panel">
+          {passportSavedCount !== null ? (
+            <p className="trip-passport-confirmation">
+              Added {passportSavedCount} stop{passportSavedCount === 1 ? '' : 's'} to your Passport.{' '}
+              <a href="/passport">View your Passport →</a>
+            </p>
+          ) : (
+            <>
+              <p className="trip-passport-intro">Untick anywhere you skipped, then confirm.</p>
+              <div className="trip-passport-stop-list">
+                {current.payload.itinerary.map((day, dayIdx) => (
+                  <div key={dayIdx} className="trip-passport-day">
+                    <span className="trip-passport-day-label">Day {day.day}</span>
+                    {day.stops.map((stop, stopIdx) => {
+                      const key = `${dayIdx}-${stopIdx}`
+                      return (
+                        <label key={key} className="trip-passport-stop-check">
+                          <input
+                            type="checkbox"
+                            checked={!!passportChecks[key]}
+                            onChange={() => togglePassportCheck(key)}
+                          />
+                          {stop.name}
+                        </label>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="trip-passport-actions">
+                <button type="button" className="intake-submit-btn" onClick={handleConfirmPassport} disabled={savingPassport}>
+                  {savingPassport ? 'Adding…' : 'Confirm — add to Passport'}
+                </button>
+                <button type="button" className="trip-passport-cancel" onClick={() => setShowPassportPanel(false)} disabled={savingPassport}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <p className="trip-verified-note">Verified on {formatDate(current.verifiedAt)}</p>
 
@@ -223,7 +322,14 @@ export default function TripPage({ data }) {
         </div>
       )}
 
-      <TurnAnswer result={current.payload} verifiedAt={current.verifiedAt} hideItinerary={editing} />
+      <TurnAnswer
+        result={current.payload}
+        verifiedAt={current.verifiedAt}
+        hideItinerary={editing}
+        bucketListKeys={bucketListKeys}
+        bucketListSaveStatus={bucketListSaveStatus}
+        onSaveToBucketList={onSaveToBucketList}
+      />
 
       {editing && (
         <EditableItinerary
