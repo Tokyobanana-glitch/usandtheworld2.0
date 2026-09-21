@@ -632,7 +632,7 @@ function App() {
       <div className="earth-overlay" aria-hidden="true" />
 
       <Link to="/explore" className="trip-page-home-link hero-explore-link">
-        Explore trips
+        All verified trips
       </Link>
 
       <div className="hero-content">

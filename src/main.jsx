@@ -6,6 +6,8 @@ import App from './App.jsx'
 import TripPage from './TripPage.jsx'
 import ExplorePage from './ExplorePage.jsx'
 import TripsPage from './TripsPage.jsx'
+import BucketListPage from './BucketListPage.jsx'
+import PassportPage from './PassportPage.jsx'
 import Layout from './Layout.jsx'
 import { AuthProvider } from './AuthContext.jsx'
 
@@ -43,6 +45,8 @@ function Root() {
         <Route element={<Layout />}>
           <Route path="/" element={<App />} />
           <Route path="/trips" element={<TripsPage />} />
+          <Route path="/bucket-list" element={<BucketListPage />} />
+          <Route path="/passport" element={<PassportPage />} />
           <Route path="/explore" element={<ExplorePage data={exploreData} />} />
         </Route>
       </Routes>

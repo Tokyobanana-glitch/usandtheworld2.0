@@ -1766,3 +1766,398 @@ a.status-chip:hover {
   color: rgba(242, 242, 245, 0.9);
   margin: 0;
 }
+
+/* Bucket List — reuses .explore-header/.explore-empty/.intake-notes-input/
+   .intake-submit-btn/.result-error from elsewhere in this file; the classes
+   below are only the pieces specific to this tab. 16px radius (vs. the
+   14px .explore-card and 12px .trips-page-item use) is this feature's own
+   spec, not a mismatch — see the tab's design brief. */
+.bucket-list-page,
+.passport-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+  color: #f2f2f5;
+}
+
+.tab-auth-pitch {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.tab-auth-pitch p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.bucket-list-inspire {
+  margin-top: 40px;
+}
+
+.bucket-list-inline-form,
+.bucket-list-add-place {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.bucket-list-inline-form .intake-notes-input,
+.bucket-list-add-place .intake-notes-input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.bucket-list-inline-form .intake-submit-btn,
+.bucket-list-add-place .intake-submit-btn {
+  flex: 1 1 140px;
+  white-space: nowrap;
+}
+
+.bucket-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.bucket-list-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 6px 6px 6px 18px;
+}
+
+.bucket-list-card-open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 0;
+}
+
+.bucket-list-card-name {
+  font-family: var(--serif);
+  font-size: 18px;
+  color: #fff;
+}
+
+.bucket-list-card-meta {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.bucket-list-card-actions {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.bucket-list-card-rename {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  padding: 6px 0;
+}
+
+.bucket-list-card-rename .intake-notes-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.bucket-list-icon-btn {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.bucket-list-icon-btn:hover {
+  color: #c084fc;
+}
+
+.bucket-list-back {
+  background: none;
+  border: none;
+  color: #c084fc;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  min-height: 44px;
+}
+
+.bucket-list-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bucket-list-detail-title-row h1 {
+  font-family: var(--serif);
+  font-size: 30px;
+  margin: 0;
+  color: #fff;
+  flex: 1;
+}
+
+.bucket-list-detail-rename {
+  margin-bottom: 8px;
+}
+
+.bucket-list-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bucket-list-item-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+
+.bucket-list-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.bucket-list-item-name {
+  font-family: var(--serif);
+  font-size: 17px;
+  color: #fff;
+}
+
+.bucket-list-item-city {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.bucket-list-item-unlocatable {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.bucket-list-item-note {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 40px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 13.5px;
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .bucket-list-card-open,
+  .bucket-list-back,
+  .bucket-list-icon-btn {
+    min-height: 44px;
+  }
+}
+
+/* Passport — "stamps" grid. Reuses .bucket-list-back/.bucket-list-icon-btn/
+   .bucket-list-detail-title-row/.intake-notes-input/.intake-submit-btn/
+   .intake-field-label/.result-error; only the pieces specific to this tab
+   are below. Same 16px radius as Bucket List's own cards. */
+.passport-add-btn {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.passport-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.passport-stamp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  min-height: 44px;
+}
+
+.passport-stamp-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.passport-stamp-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.passport-stamp-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.28), rgba(192, 132, 252, 0.06));
+}
+
+.passport-stamp-name {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: #fff;
+  margin-top: 4px;
+}
+
+.passport-stamp-date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.passport-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.passport-note-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 14px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.passport-photo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.passport-photo-picker-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 14px;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  width: fit-content;
+}
+
+/* Native file input visually hidden but still keyboard/screen-reader
+   reachable via the wrapping label — the label is the styled control. */
+.passport-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.passport-upload-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.passport-upload-queue-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.passport-upload-queue-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passport-upload-queue-status {
+  flex-shrink: 0;
+  color: #c084fc;
+}
+
+.passport-upload-note {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.passport-detail-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.passport-detail-photo {
+  position: relative;
+}
+
+.passport-detail-photo img,
+.passport-detail-photo .passport-stamp-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.passport-detail-photo-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(3, 4, 10, 0.72);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.85);
+}
