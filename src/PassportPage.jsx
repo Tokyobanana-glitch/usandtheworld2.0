@@ -34,7 +34,8 @@ async function signPhotoUrls(paths) {
 // BucketListPage.jsx and supabase/004_auth_bucket_passport.sql). Photo
 // bytes go straight to Storage from the browser too (upload/remove/sign all
 // respect the storage.objects RLS policies keyed on the <user_id> folder
-// prefix), never through a server endpoint — only /api/geocode-place is
+// prefix), never through a server endpoint — only place resolution
+// (api/trip-edit.js's 'geocode-place' mode — see geocodePlace below) is
 // server-side, and that's stateless.
 export default function PassportPage() {
   const { user, loading: authLoading, requestSignIn } = useAuth()
@@ -276,10 +277,10 @@ function SignedInPassport({ userId }) {
 
 async function geocodePlace(name, city) {
   try {
-    const res = await fetch('/api/geocode-place', {
+    const res = await fetch('/api/trip-edit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, city }),
+      body: JSON.stringify({ mode: 'geocode-place', name, city }),
     })
     if (!res.ok) return { lat: null, lng: null }
     const data = await res.json()

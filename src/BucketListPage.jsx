@@ -354,10 +354,10 @@ function BucketListDetail({
 
     let geocoded = { lat: null, lng: null, placeKey: null }
     try {
-      const res = await fetch('/api/geocode-place', {
+      const res = await fetch('/api/trip-edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, city }),
+        body: JSON.stringify({ mode: 'geocode-place', name, city }),
       })
       if (res.ok) {
         geocoded = await res.json()

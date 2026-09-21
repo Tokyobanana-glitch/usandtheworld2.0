@@ -53,6 +53,36 @@ export default async function handler(req, res) {
     return
   }
 
+  // Bucket List / Passport's "add a place" search shares this function
+  // rather than getting its own — the Vercel Hobby plan caps a deployment
+  // at 12 serverless functions, already fully used. This is a genuinely
+  // separate, stateless operation (no slug, no itinerary), so it's an
+  // early-return branch ahead of the edit logic below, not folded into it.
+  if (req.body?.mode === 'geocode-place') {
+    const { name, city } = req.body
+    if (!name || typeof name !== 'string' || !name.trim() || !city || typeof city !== 'string' || !city.trim()) {
+      res.status(400).json({ error: "Both 'name' and 'city' are required" })
+      return
+    }
+    try {
+      const [result] = await geocodeStops([
+        { name: name.trim(), searchName: name.trim(), city: city.trim(), locality: city.trim(), proximity: 'in-city' },
+      ])
+      res.status(200).json({
+        name: result.name,
+        city: result.city,
+        lat: result.unlocatable ? null : result.lat,
+        lng: result.unlocatable ? null : result.lng,
+        unlocatable: !!result.unlocatable,
+        placeKey: result.placeKey,
+      })
+    } catch (err) {
+      console.error('geocode-place error:', err)
+      res.status(502).json({ error: 'Failed to resolve this place' })
+    }
+    return
+  }
+
   const { slug, itinerary } = req.body ?? {}
   if (!slug || typeof slug !== 'string') {
     res.status(400).json({ error: "Missing 'slug' string in request body" })
