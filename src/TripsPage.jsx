@@ -100,7 +100,7 @@ export default function TripsPage() {
         <p className="explore-empty">Loading your trips…</p>
       ) : trips.length === 0 ? (
         <p className="explore-empty">
-          No saved trips yet — <a href="/">search for a destination</a> to start one.
+          No saved trips yet — <a href="/" className="explore-empty-link">search for a destination</a> to start one.
         </p>
       ) : (
         <div className="trips-page-list">
