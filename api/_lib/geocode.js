@@ -465,12 +465,48 @@ function placeNamesMatch(a, b) {
 // 2. Distance fallback: same place under a language/granularity difference
 //    with no usable parent-place data (Rome/Roma, Prague/Praha) — measured
 //    0.2-2km apart, versus the original wrong-town bug at 7.5km.
+//
+// A bare, unqualified alias lookup is itself ambiguous for a generic
+// administrative name shared across multiple cities — "Kita-ku"/"Minami-ku"
+// exist as real wards in Kyoto AND Tokyo/Yokohama/Osaka/etc, and geocoding
+// the bare name always wins whichever city Mapbox ranks most prominent,
+// never Kyoto's own (confirmed live: bare "Kita-ku" -> Tokyo, "Minami-ku"
+// -> Yokohama, both hundreds of km from Kyoto — the root cause behind
+// Tō-ji/Daitoku-ji/Kamigamo Shrine failing to geocode; see the "Japan —
+// ambiguous ward names" fixture cases). Qualifying the query with the
+// trip's own target city ("Kita-ku, Kyoto") resolves this directly and
+// correctly for a ward that's genuinely part of that city, confirmed live
+// against five real cases — but a real ward's coordinates can legitimately
+// sit several km from an arbitrary "city center" anchor point for a large,
+// sprawling city (Kyoto's own municipal anchor sits ~5.7km from its own
+// Fushimi-ku, just outside CONTEXT_ALIAS_KM), so this path is checked
+// against the wider IN_CITY_DISTANCE_CEILING_KM that evaluateCandidate
+// already trusts for any context.place-matched candidate — the
+// qualification itself (this is a real place found by name WITHIN the
+// target city, not just something nearby) is the extra evidence that earns
+// the wider radius, which a bare, unqualified lookup doesn't have. Verified
+// this doesn't turn into a false accept: a ward the target city doesn't
+// actually have ("Nishi-ku, Kyoto") and a corrupted qualified query
+// ("Praha, Prague", which resolves to an unrelated Slovak town) both still
+// land hundreds of km away, well outside this ceiling too.
+//
+// Only ever ADDS acceptances on top of the original bare-lookup check below
+// (which runs unchanged, at the original tighter CONTEXT_ALIAS_KM radius,
+// exactly as before) — this can't regress a case that only ever worked
+// through the bare path, since that path is untouched.
 async function isContextAlias(candidatePlaceName, ctx) {
   if (!ctx.cityCenter) return false
-  const aliasInfo = await geocodeCity(candidatePlaceName)
-  if (!aliasInfo) return false
-  if (aliasInfo.placeName && placeNamesMatch(aliasInfo.placeName, ctx.targetCityName)) return true
-  return haversineKm(ctx.cityCenter, aliasInfo) <= CONTEXT_ALIAS_KM
+
+  const qualified = await geocodeCity(`${candidatePlaceName}, ${ctx.targetCityName}`)
+  if (qualified) {
+    if (qualified.placeName && placeNamesMatch(qualified.placeName, ctx.targetCityName)) return true
+    if (haversineKm(ctx.cityCenter, qualified) <= IN_CITY_DISTANCE_CEILING_KM) return true
+  }
+
+  const bare = await geocodeCity(candidatePlaceName)
+  if (!bare) return false
+  if (bare.placeName && placeNamesMatch(bare.placeName, ctx.targetCityName)) return true
+  return haversineKm(ctx.cityCenter, bare) <= CONTEXT_ALIAS_KM
 }
 
 async function evaluateCandidate(candidate, ctx) {

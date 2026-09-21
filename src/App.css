@@ -299,7 +299,9 @@
 }
 
 .result-destination-image-credit {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   margin-top: 6px;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.45);
@@ -664,10 +666,19 @@
   background: rgba(96, 165, 250, 0.15);
 }
 
+/* min-height grows the actual hit area without changing the pill's own
+   padding (still .status-chip's 3px 9px, so it looks exactly as compact as
+   the non-link variant) — the negative margin keeps the extra invisible
+   height from pushing the stop-card-header row taller (see the Phase 3
+   mobile-polish audit, overnight build). Safe within its flex row: this
+   only grows the item vertically, not its siblings' horizontal layout. */
 a.status-chip {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-content: center;
+  min-height: 44px;
+  margin: -12px 0;
   text-decoration: none;
   cursor: pointer;
   line-height: 1.5;
@@ -707,6 +718,9 @@ a.status-chip:hover {
 }
 
 .result-sources a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   color: #c084fc;
   text-decoration: none;
 }
@@ -815,7 +829,13 @@ a.status-chip:hover {
   gap: 10px;
 }
 
+/* Padding grows the tap target to 44px without growing the visible text —
+   a link this size otherwise measures well under the mobile tap-target
+   floor (see the Phase 3 mobile-polish audit, overnight build). */
 .trip-page-home-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: rgba(255, 255, 255, 0.6);
   text-decoration: none;
   font-size: 13px;
@@ -1214,6 +1234,17 @@ a.status-chip:hover {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Invisible-padding tap-target expansion for an inline text link — padding
+   grows the hit box, the matching negative margin keeps the surrounding
+   paragraph's line layout unchanged (see the Phase 3 mobile-polish audit,
+   overnight build). */
+.explore-empty-link {
+  display: inline-block;
+  padding: 12px 2px;
+  margin: -12px -2px;
+  color: #c084fc;
+}
+
 .explore-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1225,7 +1256,7 @@ a.status-chip:hover {
   flex-direction: column;
   gap: 4px;
   padding: 20px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   text-decoration: none;
@@ -1394,7 +1425,7 @@ a.status-chip:hover {
   gap: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 14px 16px;
 }
 
@@ -1662,6 +1693,9 @@ a.status-chip:hover {
 
 .intake-clear-prefs {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.45);
@@ -1876,7 +1910,7 @@ a.status-chip:hover {
 .bucket-list-card-rename .intake-notes-input {
   flex: 1;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .bucket-list-icon-btn {
@@ -1970,7 +2004,7 @@ a.status-chip:hover {
 .bucket-list-item-note {
   flex: 1 1 160px;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: #f2f2f5;
@@ -2160,4 +2194,272 @@ a.status-chip:hover {
   background: rgba(3, 4, 10, 0.72);
   border-radius: 50%;
   color: rgba(255, 255, 255, 0.85);
+}
+
+/* Phase 2 (overnight build) — tab cross-links: Bucket List <-> itinerary
+   stops, Travel -> Passport, Bucket List -> Passport. See StopCard/
+   TripPage.jsx/BucketListPage.jsx and services/quickSaves.js. */
+.stop-chip--bucket-list {
+  color: #1a0b2e;
+  background: #c084fc;
+  font-weight: 600;
+}
+
+.stop-save-bucket-list {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+  background: none;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #c084fc;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.stop-save-bucket-list:hover {
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.stop-save-bucket-list:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.trip-passport-panel {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.trip-passport-intro {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 12px;
+}
+
+.trip-passport-stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.trip-passport-day-label {
+  display: block;
+  font-family: var(--serif);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 4px;
+}
+
+.trip-passport-stop-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  color: #f2f2f5;
+}
+
+.trip-passport-stop-check input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.trip-passport-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.trip-passport-cancel {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f2f2f5;
+  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.trip-passport-confirmation {
+  font-size: 14px;
+  color: rgba(242, 242, 245, 0.9);
+  margin: 0;
+}
+
+.trip-passport-confirmation a {
+  color: #c084fc;
+}
+
+.bucket-list-mark-visited {
+  flex-shrink: 0;
+  min-height: 44px;
+  background: none;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #c084fc;
+  font-size: 12.5px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bucket-list-mark-visited:hover {
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.bucket-list-mark-visited:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bucket-list-item-visited {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: #c084fc;
+  white-space: nowrap;
+}
+
+/* Explore briefs (Phase 4, overnight build) — editorial "why go now" cards.
+   Same solid background as .discover-feed for an invisible seam between
+   sections, same 16px radius as every other tab's cards. No image_url yet
+   (generated separately later), so no gradient scrim needed here — nothing
+   sits on top of a photo in this card. */
+.explore-briefs {
+  background: #050813;
+  padding: 8px 20px 24px;
+}
+
+.explore-briefs-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.explore-briefs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.explore-brief-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.explore-brief-city {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: #fff;
+}
+
+.explore-brief-country {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: -6px;
+}
+
+.explore-brief-why {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 4px 0 0;
+}
+
+.explore-brief-highlights {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.explore-brief-highlights strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.explore-brief-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.explore-brief-chip {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.explore-brief-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 8px;
+  background: #c084fc;
+  border: none;
+  color: #1a0b2e;
+  font-weight: 600;
+  font-size: 13.5px;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.explore-brief-cta:hover {
+  background: #d8b4fe;
+}
+
+.explore-brief-sources {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.explore-brief-sources summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.explore-brief-sources ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.explore-brief-sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #c084fc;
+  text-decoration: none;
+}
+
+.explore-brief-sources a:hover {
+  text-decoration: underline;
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from './services/supabaseClient'
+import { createPassportEntryFromPlace } from './services/quickSaves'
 import DiscoverFeed from './DiscoverFeed'
 
 // Reads and writes bucket_lists / bucket_list_items directly through the
@@ -200,6 +201,20 @@ function SignedInBucketList({ userId }) {
     if (error) console.error('bucket_list_items note update error:', error)
   }
 
+  // Bucket List -> Passport: a one-time action, not a persisted "visited"
+  // flag on the item — bucket_list_items has no such column, and adding one
+  // would be a schema change this phase doesn't need. The item stays on the
+  // list either way; this just also creates a Passport entry for it.
+  async function markItemVisited(item) {
+    const entry = await createPassportEntryFromPlace(userId, {
+      name: item.place_name,
+      city: item.city,
+      lat: item.lat,
+      lng: item.lng,
+    })
+    return !!entry
+  }
+
   if (view === 'detail' && selectedList) {
     return (
       <BucketListDetail
@@ -220,6 +235,7 @@ function SignedInBucketList({ userId }) {
         onItemAdded={handleItemAdded}
         onRemoveItem={removeItem}
         onUpdateNote={updateItemNote}
+        onMarkVisited={markItemVisited}
       />
     )
   }
@@ -337,6 +353,7 @@ function BucketListDetail({
   onItemAdded,
   onRemoveItem,
   onUpdateNote,
+  onMarkVisited,
 }) {
   const [placeName, setPlaceName] = useState('')
   const [placeCity, setPlaceCity] = useState('')
@@ -468,7 +485,13 @@ function BucketListDetail({
       ) : (
         <div className="bucket-list-item-list">
           {items.map((item) => (
-            <BucketListItemCard key={item.id} item={item} onRemove={() => onRemoveItem(item.id)} onUpdateNote={onUpdateNote} />
+            <BucketListItemCard
+              key={item.id}
+              item={item}
+              onRemove={() => onRemoveItem(item.id)}
+              onUpdateNote={onUpdateNote}
+              onMarkVisited={onMarkVisited}
+            />
           ))}
         </div>
       )}
@@ -476,8 +499,15 @@ function BucketListDetail({
   )
 }
 
-function BucketListItemCard({ item, onRemove, onUpdateNote }) {
+function BucketListItemCard({ item, onRemove, onUpdateNote, onMarkVisited }) {
   const [note, setNote] = useState(item.note ?? '')
+  const [visitedStatus, setVisitedStatus] = useState('idle') // idle | saving | done
+
+  async function handleMarkVisited() {
+    setVisitedStatus('saving')
+    const ok = await onMarkVisited(item)
+    setVisitedStatus(ok ? 'done' : 'idle')
+  }
 
   return (
     <div className="bucket-list-item-card">
@@ -496,6 +526,18 @@ function BucketListItemCard({ item, onRemove, onUpdateNote }) {
           if (note !== (item.note ?? '')) onUpdateNote(item.id, note)
         }}
       />
+      {visitedStatus === 'done' ? (
+        <span className="bucket-list-item-visited">Added to Passport ✓</span>
+      ) : (
+        <button
+          type="button"
+          className="bucket-list-mark-visited"
+          onClick={handleMarkVisited}
+          disabled={visitedStatus === 'saving'}
+        >
+          {visitedStatus === 'saving' ? 'Adding…' : 'Mark visited'}
+        </button>
+      )}
       <button type="button" className="bucket-list-icon-btn" aria-label={`Remove ${item.place_name}`} onClick={onRemove}>
         ×
       </button>
