@@ -7,6 +7,7 @@ import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatC
 import RecentTrips from './RecentTrips'
 import RotatingTagline from './RotatingTagline'
 import DiscoverFeed from './DiscoverFeed'
+import ExploreBriefs from './ExploreBriefs'
 import IntakePanel from './IntakePanel'
 import './App.css'
 
@@ -619,6 +620,19 @@ function App() {
     setIntakeContext({ baseQuery: ctaQuery, topic: null })
   }
 
+  // Explore briefs already name a specific destination — route through the
+  // same intake-panel flow a typed "trip to Tokyo" search would trigger
+  // (see handleSearch's extractTopic path) rather than jumping straight to
+  // a default-length itinerary with no day-count/budget/preferences.
+  // Country tags along when available so an ambiguous city name (Valencia,
+  // Santiago, San José — several real places share these) still resolves
+  // to the right one; composeIntakeQuery just drops it into "X days in
+  // {topic}", so "Valencia, Spain" reads fine as-is.
+  function handleBuildItineraryFromBrief(city, country) {
+    const topic = country ? `${city}, ${country}` : city
+    setIntakeContext({ baseQuery: topic, topic })
+  }
+
   function handleIntakeSubmit(composedQuery) {
     setIntakeContext(null)
     runSearch(composedQuery)
@@ -763,6 +777,7 @@ function App() {
         stretch the video over a much taller page. This lives below the
         fold, in normal flow, with its own solid background — and only on
         the landing state, matching where <RecentTrips> also hides. */}
+    {thread.length === 0 && <ExploreBriefs onBuildItinerary={handleBuildItineraryFromBrief} />}
     {thread.length === 0 && <DiscoverFeed />}
     {intakeContext && (
       <IntakePanel

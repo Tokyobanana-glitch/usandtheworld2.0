@@ -2328,3 +2328,138 @@ a.status-chip:hover {
   color: #c084fc;
   white-space: nowrap;
 }
+
+/* Explore briefs (Phase 4, overnight build) — editorial "why go now" cards.
+   Same solid background as .discover-feed for an invisible seam between
+   sections, same 16px radius as every other tab's cards. No image_url yet
+   (generated separately later), so no gradient scrim needed here — nothing
+   sits on top of a photo in this card. */
+.explore-briefs {
+  background: #050813;
+  padding: 8px 20px 24px;
+}
+
+.explore-briefs-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.explore-briefs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.explore-brief-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.explore-brief-city {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: #fff;
+}
+
+.explore-brief-country {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: -6px;
+}
+
+.explore-brief-why {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 4px 0 0;
+}
+
+.explore-brief-highlights {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.explore-brief-highlights strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.explore-brief-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.explore-brief-chip {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.explore-brief-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 8px;
+  background: #c084fc;
+  border: none;
+  color: #1a0b2e;
+  font-weight: 600;
+  font-size: 13.5px;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.explore-brief-cta:hover {
+  background: #d8b4fe;
+}
+
+.explore-brief-sources {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.explore-brief-sources summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.explore-brief-sources ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.explore-brief-sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #c084fc;
+  text-decoration: none;
+}
+
+.explore-brief-sources a:hover {
+  text-decoration: underline;
+}

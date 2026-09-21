@@ -3,6 +3,7 @@ import { getItineraryBySlug, saveItinerary, CACHE_FRESHNESS_DAYS } from '../_lib
 import { diffItineraries } from '../_lib/itineraryDiff.js'
 import { getSupabase } from '../_lib/supabase.js'
 import { sendTripChangeEmail } from '../_lib/email.js'
+import { runWeeklyBriefGeneration } from '../_lib/exploreBriefs.js'
 
 // Vercel Cron invokes this with an `Authorization: Bearer $CRON_SECRET`
 // header automatically once CRON_SECRET is set as an env var — this check
@@ -82,5 +83,19 @@ export default async function handler(req, res) {
     }
   }
 
-  res.status(200).json({ watchedTrips: bySlug.size, checked: checkedCount, emailed: emailedCount })
+  // Explore briefs refresh weekly, not per-request — piggybacking on this
+  // cron's existing daily schedule (rather than adding a second Vercel Cron
+  // entry and a second serverless function) and self-gating to one day a
+  // week keeps it weekly in practice. Runs after the watch-check above so a
+  // slow/failed brief batch can never delay or block trip-change emails.
+  let briefsResult = null
+  if (new Date().getUTCDay() === 0) {
+    try {
+      briefsResult = await runWeeklyBriefGeneration()
+    } catch (err) {
+      console.error('weekly explore-briefs generation failed:', err)
+    }
+  }
+
+  res.status(200).json({ watchedTrips: bySlug.size, checked: checkedCount, emailed: emailedCount, briefs: briefsResult })
 }
