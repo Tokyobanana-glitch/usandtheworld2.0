@@ -44,6 +44,16 @@ const FIXTURE = [
   { region: 'Japan', name: 'Kiyomizu Temple', searchName: '清水寺', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 34.9949, lng: 135.7850 },
   { region: 'Japan', name: 'Arashiyama Bamboo Grove', searchName: '嵐山竹林の道', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 35.0094, lng: 135.6693 },
   { region: 'Japan', name: 'Todai-ji Temple (Nara day trip)', searchName: '東大寺', city: 'Kyoto', locality: 'Nara', proximity: 'day-trip', lat: 34.6890, lng: 135.8398 }, // legit ~40km day trip, real locality differs — this is the Todai-ji test case
+  // Ambiguous-ward regression cases: all three genuinely sit in a Kyoto ward
+  // whose bare name is ALSO a real ward of a different, more prominent
+  // Japanese city (Tō-ji/Kamigamo -> Kita-ku, also Tokyo/Osaka/Nagoya/
+  // Sapporo's own Kita-ku; Daitoku-ji -> Minami-ku, also Yokohama's own).
+  // Before the isContextAlias city-qualification fix, each of these failed
+  // with "context mismatch — resolved in [wrong city's ward]" — see
+  // api/_lib/geocode.js's isContextAlias for the full mechanism.
+  { region: 'Japan', name: 'Toji Temple', searchName: '東寺', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 34.9812, lng: 135.7476 },
+  { region: 'Japan', name: 'Daitoku-ji', searchName: '大徳寺', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 35.0431, lng: 135.7461 },
+  { region: 'Japan', name: 'Kamigamo Shrine', searchName: '上賀茂神社', city: 'Kyoto', locality: 'Kyoto', proximity: 'in-city', lat: 35.0601, lng: 135.7527 },
 
   // --- Europe (Rome) ---
   { region: 'Europe', name: 'Colosseum', searchName: 'Colosseo', city: 'Rome', locality: 'Rome', proximity: 'in-city', lat: 41.8902, lng: 12.4922 },
