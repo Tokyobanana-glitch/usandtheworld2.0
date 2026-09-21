@@ -1,0 +1,15 @@
+.app-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-page-bg);
+}
+
+/* Reserves room for the fixed mobile tab bar so page content never sits
+   behind it. Not needed on desktop — TopNav is sticky-in-flow, not fixed,
+   so it never overlaps content below it. */
+@media (max-width: 767px) {
+  .app-shell {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+}

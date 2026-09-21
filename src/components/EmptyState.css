@@ -1,0 +1,65 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+}
+
+.empty-state--card {
+  background: var(--color-card-bg);
+  border-radius: var(--radius-hero);
+  margin: var(--space-4) var(--space-5);
+}
+
+.empty-state-illustration {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin-bottom: var(--space-2);
+}
+
+.empty-state-title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.empty-state-description {
+  font-size: var(--font-size-body);
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 34ch;
+}
+
+.empty-state-cta-btn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--space-3);
+  background: var(--color-button-primary-bg);
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+
+.empty-state-cta-link {
+  min-height: 44px;
+  margin-top: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: 500;
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+
+.empty-state-cta-link:hover,
+.empty-state-cta-btn:hover {
+  color: var(--color-accent-hover);
+}

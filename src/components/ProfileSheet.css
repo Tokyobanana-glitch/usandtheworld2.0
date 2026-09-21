@@ -1,0 +1,21 @@
+.profile-sheet-title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: var(--font-size-page-title);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.profile-sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.profile-sheet-heading {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  margin: 0;
+}

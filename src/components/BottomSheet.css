@@ -1,0 +1,123 @@
+/* Same shell as the pre-existing .intake-overlay/.intake-panel (App.css) —
+   z-index sits above the tab bar (20) and desktop top nav so either is
+   fully covered while a sheet is open. */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(3, 4, 10, 0.72);
+}
+
+.bottom-sheet-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-page-bg);
+  border: 1px solid var(--color-hairline);
+  border-bottom: none;
+  border-radius: var(--radius-hero) var(--radius-hero) 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  color: var(--color-text-primary);
+}
+
+.bottom-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-hairline);
+  flex-shrink: 0;
+}
+
+.bottom-sheet-panel--auto .bottom-sheet-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 19px;
+  margin: 0;
+}
+
+.bottom-sheet-close {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.bottom-sheet-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-hairline);
+  flex-shrink: 0;
+  background: var(--color-page-bg);
+}
+
+@media (min-width: 768px) {
+  .bottom-sheet-overlay {
+    align-items: center;
+    padding: var(--space-5);
+  }
+
+  .bottom-sheet-panel--auto {
+    border-radius: var(--radius-hero);
+    border-bottom: 1px solid var(--color-hairline);
+    max-height: 85svh;
+  }
+}
+
+/* "full" — Profile's full-screen sheet, per the reference: a large
+   left-aligned title (matches PageHeader--large) with just an accent close
+   icon top-right, no bottom-sheet card treatment at any width. */
+.bottom-sheet-panel--full {
+  max-width: none;
+  max-height: 100svh;
+  height: 100svh;
+  border: none;
+  border-radius: 0;
+}
+
+.bottom-sheet-panel--full .bottom-sheet-header {
+  border-bottom: none;
+  padding: var(--space-4) var(--space-5) 0;
+  justify-content: flex-end;
+}
+
+.bottom-sheet-panel--full .bottom-sheet-title {
+  display: none;
+}
+
+.bottom-sheet-panel--full .bottom-sheet-close {
+  font-size: 22px;
+}
+
+@media (min-width: 768px) {
+  .bottom-sheet-panel--full {
+    max-width: 640px;
+    height: auto;
+    max-height: 85svh;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-hero);
+  }
+}

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { getSupabaseClient } from './services/supabaseClient'
 import { migrateLocalDataToAccount } from './services/accountMigration'
 import SignInSheet from './SignInSheet'
+import ProfileSheet from './components/ProfileSheet'
 
 const AuthContext = createContext(null)
 
@@ -15,6 +16,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
     const supabase = getSupabaseClient()
@@ -51,16 +53,19 @@ export function AuthProvider({ children }) {
 
   const requestSignIn = useCallback(() => setSheetOpen(true), [])
   const closeSignInSheet = useCallback(() => setSheetOpen(false), [])
+  const requestProfile = useCallback(() => setProfileOpen(true), [])
+  const closeProfile = useCallback(() => setProfileOpen(false), [])
 
   const value = useMemo(
-    () => ({ session, user: session?.user ?? null, loading, requestSignIn }),
-    [session, loading, requestSignIn],
+    () => ({ session, user: session?.user ?? null, loading, requestSignIn, requestProfile }),
+    [session, loading, requestSignIn, requestProfile],
   )
 
   return (
     <AuthContext.Provider value={value}>
       {children}
       {sheetOpen && <SignInSheet onClose={closeSignInSheet} />}
+      {profileOpen && <ProfileSheet onClose={closeProfile} />}
     </AuthContext.Provider>
   )
 }

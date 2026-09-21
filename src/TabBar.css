@@ -1,0 +1,47 @@
+/* Lifted surface (per the reference: "slightly lighter than the page")
+   with a hairline top border, safe-area aware. */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--color-card-bg);
+  border-top: 1px solid var(--color-hairline);
+  /* Safe-area inset folds into the bar's own height rather than sitting
+     below it, so the tap targets stay flush with the bar's visible top edge
+     on a device with a home-indicator gesture bar. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 8px 4px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.tab-bar-item--active {
+  color: var(--color-accent);
+}
+
+.tab-bar-label {
+  font-family: var(--sans);
+  font-size: 11px;
+}
+
+/* The bottom tab bar is a mobile navigation pattern — TopNav.jsx takes over
+   at the same breakpoint (see TopNav.css), reaching the same 4 destinations
+   plus the profile icon from a top bar instead. */
+@media (min-width: 768px) {
+  .tab-bar {
+    display: none;
+  }
+}

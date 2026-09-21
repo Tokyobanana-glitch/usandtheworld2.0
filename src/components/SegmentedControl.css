@@ -1,0 +1,26 @@
+.segmented-control {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-tile);
+  padding: 3px;
+}
+
+.segmented-control-item {
+  flex: 1;
+  min-height: 38px;
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius-tile) - 3px);
+  color: var(--color-text-secondary);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.segmented-control-item--active {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}

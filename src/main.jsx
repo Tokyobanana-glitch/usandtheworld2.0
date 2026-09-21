@@ -1,15 +1,31 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import TripPage from './TripPage.jsx'
-import ExplorePage from './ExplorePage.jsx'
-import TripsPage from './TripsPage.jsx'
-import BucketListPage from './BucketListPage.jsx'
-import PassportPage from './PassportPage.jsx'
 import Layout from './Layout.jsx'
 import { AuthProvider } from './AuthContext.jsx'
+
+// Route-level code splitting — App (the landing page, reached on nearly
+// every visit) and TripPage (the SSR-hydration branch, which must be
+// synchronously available the instant window.__TRIP_DATA__ is present) stay
+// eager; everything reached by tapping a tab loads on demand instead of
+// padding the initial bundle every visitor pays for regardless of which
+// tabs they ever open.
+const ExplorePage = lazy(() => import('./ExplorePage.jsx'))
+const TripsPage = lazy(() => import('./TripsPage.jsx'))
+const BucketListPage = lazy(() => import('./BucketListPage.jsx'))
+const PassportPage = lazy(() => import('./PassportPage.jsx'))
+
+// Deliberately blank rather than a spinner — the app shell's own background
+// is already the page's dark color (see Layout.css), so a blank fallback
+// while the chunk downloads reads as a quiet pause, not a white flash. Each
+// page then renders its own "Loading…" text for its data fetch once
+// mounted, so a spinner here would just flash before that same message.
+function RouteFallback() {
+  return null
+}
 
 // /trip/:slug and /explore can both also be full page loads (api/trip-page.js
 // and api/explore-page.js serve them, injecting window.__TRIP_DATA__ /
@@ -44,10 +60,38 @@ function Root() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<App />} />
-          <Route path="/trips" element={<TripsPage />} />
-          <Route path="/bucket-list" element={<BucketListPage />} />
-          <Route path="/passport" element={<PassportPage />} />
-          <Route path="/explore" element={<ExplorePage data={exploreData} />} />
+          <Route
+            path="/trips"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <TripsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/bucket-list"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <BucketListPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/passport"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PassportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/explore"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <ExplorePage data={exploreData} />
+              </Suspense>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>
