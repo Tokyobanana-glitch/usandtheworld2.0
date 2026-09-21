@@ -1,5 +1,6 @@
 import { generateAnswer } from './_lib/generateAnswer.js'
 import { findCachedItinerary, saveItinerary } from './_lib/itineraryStore.js'
+import { getUserFromRequest } from './_lib/supabaseAuth.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,6 +32,11 @@ export default async function handler(req, res) {
     }
   }
 
+  // Optional and never blocking: a missing/invalid/expired token just means
+  // an anonymous save, exactly like today — search and generation above
+  // this point never even look at auth state. See supabaseAuth.js.
+  const user = await getUserFromRequest(req)
+
   try {
     const parsed = await generateAnswer(query, history)
 
@@ -39,7 +45,7 @@ export default async function handler(req, res) {
       // there's an itinerary, follow-up or not, since /trip/[slug] renders it
       // on its own regardless of how the conversation that produced it went.
       try {
-        const slug = await saveItinerary({ query, payload: parsed })
+        const slug = await saveItinerary({ query, payload: parsed, owner: user?.id ?? null })
         if (slug) parsed.slug = slug
       } catch (saveErr) {
         console.error('itinerary save failed, serving without a share link:', saveErr)
@@ -49,6 +55,11 @@ export default async function handler(req, res) {
     res.status(200).json(parsed)
   } catch (err) {
     console.error('travel-assistant error:', err)
-    res.status(502).json({ error: 'Failed to generate travel answer' })
+    // Surface the specific message when generateAnswer threw one on purpose
+    // (e.g. the itinerary hitting the max_tokens ceiling) — the client
+    // already renders whatever string lands here as the turn's error text,
+    // so a generic fallback here was silently swallowing a message that
+    // actually told the traveler what to do differently.
+    res.status(502).json({ error: err.message || 'Failed to generate travel answer' })
   }
 }

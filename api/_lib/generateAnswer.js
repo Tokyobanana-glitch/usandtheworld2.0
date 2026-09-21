@@ -79,7 +79,11 @@ const ITINERARY_SCHEMA = {
                 category: { type: 'string', description: 'Short category, e.g. temple, restaurant, museum, park, viewpoint, market' },
                 timeOfDay: { type: 'string', enum: ['morning', 'midday', 'afternoon', 'evening', 'night'] },
                 durationMinutes: { type: 'integer', description: 'Realistic time to spend here, in minutes' },
-                why: { type: 'string', description: 'One short sentence on why this stop, specific to this traveler’s question' },
+                why: {
+                  type: 'string',
+                  description:
+                    'One short sentence on why this stop, specific to this traveler’s question. When the traveler has stated context — who they’re traveling with, budget, pace, interests, or a constraint like mobility, diet, or occasion — connect this stop to THAT context specifically (e.g. why it works for a family with a tired 6-year-old, or why it suits a relaxed-pace anniversary trip) rather than a generic description of the place that could apply to any traveler.',
+                },
                 status: {
                   type: 'string',
                   enum: ['open', 'closed', 'seasonal', 'exterior-only', 'unverified'],
@@ -226,6 +230,8 @@ If the traveler's question itself references a specific event, incident, or clai
 
 Answer the traveler's question directly and warmly, grounded in what you actually found searching, then propose a short list of suggestions — each checked for current accuracy — and, when the question implies a trip (a duration, "plan a trip", "itinerary", etc.), a day-by-day itinerary. If no trip length is implied, return an empty itinerary array.
 
+When the traveler states a specific number of days (e.g. "7 days in Kyoto"), the "itinerary" array's length MUST equal that number exactly — not one more, not one fewer. This matters more the longer the trip: for a longer itinerary, spread genuinely different stops and a genuinely different title across every single day; never pad the count by repeating an earlier day's title or theme, and never return a day with an empty "stops" array. Plan all of the requested days as one coherent whole before writing any of them out, so the full set is internally consistent — a duplicated day or a hollow placeholder day is a wrong answer here, not a minor formatting slip.
+
 For every itinerary stop, put the verification work directly into that stop's "status" and "statusNote" fields — this is not just narrative for your answer text, it's structured data the app relies on. Mark a stop "open" only when you found current evidence it's operating, "closed" when it's gone/demolished/shut with no public access at all, "seasonal" when it's only open part of the year, "exterior-only" when it still stands and can be viewed from outside but isn't enterable (interior closed, no longer open to visitors), and "unverified" whenever you could not confirm current status via search — never default to "open" as a convenient assumption just because a place is famous or you're confident from memory. "closed" and "exterior-only" are different facts, not degrees of the same thing: a demolished building and a standing one you can still photograph from the plaza call for different traveler decisions, and collapsing them into one status is a factual error even if both technically mean "you can't go inside." Do not include a stop's coordinates; the app geocodes each stop server-side from its "searchName" and city.
 
 Always cite a real "sourceUrl" for a stop's status when you have one — the app treats a status with no source as unverified regardless of what you put in "status", so an unsupported claim gets no credit for looking confident. Fill in "priceIndicator" only when you actually found pricing during search; leave it empty rather than estimate.
@@ -235,6 +241,8 @@ Set "estimatedCost" with that same discipline, applied to admission/entry price 
 Set "backup" only for a stop that can genuinely fall through — outdoor or weather-dependent, reservation-required, capacity-limited, or seasonal. Leave it null for a stop that can't realistically fail (a public square, a walkable neighborhood, most reservation-free restaurants) — inventing a backup for every stop defeats the point. Backups exist because places close and plans break: when you do set one, it must be a real, currently-open alternative you've verified via search, near the same location — never a generic suggestion pulled from memory. If the stop's own "status" is "closed" or "seasonal", its backup matters more (the traveler will actually need it) and deserves extra care in choosing a genuinely solid nearby alternative.
 
 Set "crowdLevel" to "local-favorite" (mostly locals, off the standard tourist path), "popular-but-worth-it" (well-known and busy but earns the visit), or "tourist-heavy" (crowded, largely tourist-oriented, worth knowing before committing the time) — this is the traveler's "skip the tourist trap" signal, a separate axis from whether the place is verified open.
+
+Every stop, on every single day including the last, must be ONE specific, real, named place — a hotel, restaurant, temple, shop, park, viewpoint, whatever it is, but a place with an actual name you could point to on a map. Never write a stop as a vague activity or a category of options: "Casual dinner or ramen (central Kyoto)", "Rest, pack, or final stroll near hotel", "Browsing or final shopping", "Lunch at a local soba or udon shop" are all wrong answers, even though they read fine in prose — none of them name a place, so the app's geocoder has nothing to search for and the stop silently fails to resolve. If you're torn between a few options for a slot, pick the single best real one and commit to it, the same way you already do for a replacement stop elsewhere in these instructions; if you're not certain of a specific venue for something generic like "dinner," search for and name one actual restaurant rather than describing the meal. This matters just as much on a long itinerary as a short one — do not let the later or lower-priority days of an 8-14 day trip drift into placeholder activities just because you're covering more ground; every day gets the same level of specificity as day one.
 
 "name" and "searchName" serve different jobs — do not conflate them. "name" is what the traveler reads and can carry a clarifying qualifier ("Catedral de Santiago (Santiago Cathedral)"). "searchName" is only ever fed to a map search, so it must be the bare official/local-language name with nothing else attached — no parentheses, no "aka", no English translation tacked on, no descriptive suffix like "- Parish & Ruins". An English name for a place that locals and maps refer to by a different name is the single most common way a search fails outright: default to the local-language name in "searchName" whenever the place is not itself an English-named place, even if "name" stays in English for the traveler.
 
@@ -247,6 +255,8 @@ Set "country" to the plain country name "locality" is actually in, e.g. "Japan",
 At the trip level, set "estimatedDailyCost" and "estimatedTotalCost" as { amount, currency, confidence }, built from the confirmed per-stop "estimatedCost" figures — daily as a representative single day's total, total across the whole trip. Set "confidence" to "estimated" only when every included stop's cost could be confirmed, and "partial" when one or more stops returned a null "estimatedCost" and were therefore excluded from the sum — never present a partial total as if it covered the whole trip. Return null for both when there is no day-by-day itinerary.
 
 If the traveler stated a budget, choose stops that actually fit within it. When you deliberately pick a cheaper stop over a notable, more obvious alternative specifically to stay within that budget, say so plainly in that stop's "statusNote" (e.g. "chosen over the pricier X to fit your stated budget") rather than silently swapping with no explanation.
+
+More generally, whenever the traveler has stated context beyond the bare destination — who they're traveling with, pace, interests, or anything under "anything we should know" (mobility, diet, occasion, and similar constraints) — use it to actually shape which stops you choose, not just how you word them. A family with a stated tired 6-year-old should get a lighter day with shorter walks and kid-friendly stops, not a demanding hike with the walking distance merely mentioned afterward; a stated dietary restriction should steer food stops toward places that can accommodate it; a stated mobility limit should bias against long-walking, stair-heavy, or physically demanding stops. When a well-known, obviously-expected stop for this destination conflicts with a stated constraint and you leave it out or swap it for an alternative, say so plainly in the substitute stop's "statusNote" (e.g. "skipped the famous X here since it's a steep uphill walk, not ideal with a tired 6-year-old") — never just drop it with no explanation, since the traveler may otherwise wonder why it's missing. And connect each stop's "why" back to that stated context specifically, per its own field description — why THIS place works for THIS traveler, not a generic description that could apply to anyone.
 
 List the real sources you used in "sources", including whatever you used to verify current status.
 Finally, propose 2-4 "followUps" — concrete next questions this specific traveler would plausibly ask next, based on what they just asked and what you just told them (deeper logistics on something you mentioned, food, lodging, a nearby alternative, or building an itinerary if you didn't already give one). These must follow directly from this answer, not be interchangeable boilerplate that could apply to any destination.
@@ -316,6 +326,19 @@ function sanitizeHistory(history) {
     .map((turn) => ({ role: turn.role, content: turn.content }))
 }
 
+// max_tokens: 24000 (see below) crosses the threshold where the Anthropic
+// SDK's own client-side guard refuses a plain non-streaming
+// messages.create() outright — "Streaming is required for operations that
+// may take longer than 10 minutes" — before the request ever reaches the
+// API. .stream() + .finalMessage() sidesteps that guard and hands back the
+// exact same Anthropic.Message shape (.content, .stop_reason, ...) a
+// non-streaming create() would, so nothing downstream (the pause_turn
+// resume loop, textBlock extraction) needs to know the difference.
+async function createMessage(anthropic, params) {
+  const stream = anthropic.messages.stream(params)
+  return stream.finalMessage()
+}
+
 // Shared by api/travel-assistant.js (fresh queries) and api/trip-reverify.js
 // (re-checking a previously saved trip) so both go through the exact same
 // generation + geocoding pipeline — a re-verify that drifted from how the
@@ -340,10 +363,18 @@ export async function generateAnswer(query, history = [], { reverifyItinerary } 
     // newer web_search_20260209 dynamic-filtering tool, so this uses the
     // plain web_search_20250305 variant instead.
     model: 'claude-haiku-4-5',
-    // Bumped from 4096 after the itinerary schema grew (stops are now rich
-    // objects with status/statusNote/sourceUrl per stop instead of plain
-    // strings) — 4096 truncated mid-JSON on a 5-day itinerary.
-    max_tokens: 8192,
+    // Bumped 4096 -> 8192 when the itinerary schema first grew rich per-stop
+    // objects, then 8192 -> 24000 after a 7-day itinerary hit THAT ceiling
+    // too: stop_reason came back "max_tokens" mid-stop, truncating the JSON
+    // and throwing on JSON.parse below. The schema has only grown since (per-
+    // stop estimatedCost/backup/crowdLevel, longer context-personalized
+    // "why" text) — 24000 gives real headroom up to a 14-day itinerary (the
+    // intake panel's max), comfortably under Haiku 4.5's 64K output ceiling.
+    // A max_tokens this size is exactly what pushes the SDK's own worst-case
+    // duration estimate over its 10-minute non-streaming limit (it rejects
+    // the request outright with "Streaming is required..." before ever
+    // calling the API) — see createMessage below.
+    max_tokens: 24000,
     system: isReverify ? REVERIFY_SYSTEM_PROMPT : SYSTEM_PROMPT,
     tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
     output_config: {
@@ -352,13 +383,23 @@ export async function generateAnswer(query, history = [], { reverifyItinerary } 
   }
 
   let messages = baseMessages
-  let response = await anthropic.messages.create({ ...requestParams, messages })
+  let response = await createMessage(anthropic, { ...requestParams, messages })
 
   // The server-side web-search loop caps at 10 steps; if it's still mid-verification,
   // stop_reason is "pause_turn" with no final answer yet — resume a few times.
   for (let i = 0; i < 3 && response.stop_reason === 'pause_turn'; i++) {
     messages = [...messages, { role: 'assistant', content: response.content }]
-    response = await anthropic.messages.create({ ...requestParams, messages })
+    response = await createMessage(anthropic, { ...requestParams, messages })
+  }
+
+  // A response cut off by the max_tokens ceiling has a genuinely incomplete
+  // JSON text block — JSON.parse on it throws an opaque "Unterminated
+  // string" error with no indication of the real cause. Catching this
+  // explicitly gives a message that actually explains what happened and
+  // suggests a fix, instead of a raw parse error surfacing as a generic
+  // "Failed to generate travel answer".
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error('The itinerary was too large to finish generating — try fewer days or a more specific question.')
   }
 
   // Web search adds tool-use blocks before the final answer — grab the last text block.

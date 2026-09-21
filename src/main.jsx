@@ -7,6 +7,7 @@ import TripPage from './TripPage.jsx'
 import ExplorePage from './ExplorePage.jsx'
 import TripsPage from './TripsPage.jsx'
 import Layout from './Layout.jsx'
+import { AuthProvider } from './AuthContext.jsx'
 
 // /trip/:slug and /explore can both also be full page loads (api/trip-page.js
 // and api/explore-page.js serve them, injecting window.__TRIP_DATA__ /
@@ -51,7 +52,14 @@ function Root() {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Root />
+    {/* Wraps every branch (SSR-hydrated /trip/:slug included) so auth state
+        and the sign-in sheet are available anywhere, even though nothing in
+        this pass triggers it from the TripPage branch yet — see
+        AuthContext.jsx. It never uses router hooks, so it's safe here
+        outside BrowserRouter too. */}
+    <AuthProvider>
+      <Root />
+    </AuthProvider>
   </StrictMode>,
 )
 

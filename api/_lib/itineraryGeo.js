@@ -291,12 +291,22 @@ export async function enrichItinerary(itinerary) {
     console.log(`itinerary re-clustering: ${titleConflictCount} day title(s) reassigned/synthesized due to geographic regrouping`)
   }
 
-  const finalDays = dayGroups.map((stops, i) => ({
-    day: i + 1,
-    title: titles[i],
-    stops: stops.map(({ __originalDayIdx, ...rest }) => rest),
-    legs: legsPerDay[i],
-  }))
+  // The numDays -> locatable-count padding above (dayGroups.push([]) when
+  // k-means produced fewer real clusters than requested days) — or, in
+  // practice, a batch of stops that all failed to geocode with none
+  // redistributed into a given slot — can leave a day with zero stops after
+  // everything else runs. A hollow "Day N" with nothing in it is never a
+  // valid itinerary day to show a traveler, so it's dropped and the
+  // remaining days renumbered sequentially rather than surfaced as-is.
+  const finalDays = dayGroups
+    .map((stops, i) => ({
+      day: i + 1,
+      title: titles[i],
+      stops: stops.map(({ __originalDayIdx, ...rest }) => rest),
+      legs: legsPerDay[i],
+    }))
+    .filter((day) => day.stops.length > 0)
+    .map((day, i) => ({ ...day, day: i + 1 }))
 
   // Last step, after geography is settled: attach any of your own clips that
   // match a stop's resolved place identity. Never blocks or fails the

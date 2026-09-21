@@ -1,6 +1,10 @@
-// No accounts in this phase — trip history lives in localStorage only.
-// Every read/write is wrapped so a user with localStorage blocked or full
-// (private browsing, quota) just never sees the strip, rather than crashing.
+// The anonymous-browsing trip history — always localStorage-only, so a
+// signed-out visitor's recent searches work with no account at all. Every
+// read/write is wrapped so a user with localStorage blocked or full
+// (private browsing, quota) just never sees the strip, rather than
+// crashing. On sign-in, AuthContext.jsx's migrateLocalDataToAccount claims
+// these slugs onto the new account (see accountMigration.js) and clears
+// this list — see clearRecentTrips below.
 const KEY = 'uatw:recentTrips'
 const MAX = 8
 
@@ -34,4 +38,8 @@ export function addRecentTrip({ slug, destination, query }) {
 
 export function removeRecentTrip(slug) {
   writeAll(readAll().filter((t) => t.slug !== slug))
+}
+
+export function clearRecentTrips() {
+  writeAll([])
 }

@@ -6,6 +6,7 @@ import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatC
 import RecentTrips from './RecentTrips'
 import RotatingTagline from './RotatingTagline'
 import DiscoverFeed from './DiscoverFeed'
+import IntakePanel from './IntakePanel'
 import './App.css'
 
 const TYPEWRITER_DESTINATIONS = [
@@ -315,13 +316,13 @@ function TruncatedAnswer({ text }) {
 
 // verifiedAt defaults to "now" for a fresh, in-thread answer (it really was
 // just checked) — TripPage passes the saved trip's actual verifiedAt instead.
-// itineraryFollowUp/onSelectFollowUp are only ever passed for the active
+// itineraryFollowUp/onItineraryCta are only ever passed for the active
 // thread turn (see App()) — TripPage renders this with neither, so the CTA
 // simply doesn't appear there. hideItinerary lets TripPage swap in its own
 // editable itinerary view in edit mode, without losing everything else this
 // renders (hero image, answer text, verification receipt, suggestions,
 // sources).
-export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFollowUp, hideItinerary }) {
+export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onItineraryCta, hideItinerary }) {
   const effectiveVerifiedAt = verifiedAt || new Date().toISOString()
   const hasItinerary = result.itinerary?.length > 0
   const summary = hasItinerary ? computeVerificationSummary(result.itinerary) : null
@@ -341,7 +342,7 @@ export function TurnAnswer({ result, verifiedAt, itineraryFollowUp, onSelectFoll
       <TruncatedAnswer text={result.answer} />
 
       {itineraryFollowUp && (
-        <button type="button" className="itinerary-cta" onClick={() => onSelectFollowUp(itineraryFollowUp)}>
+        <button type="button" className="itinerary-cta" onClick={() => onItineraryCta(itineraryFollowUp)}>
           {itineraryFollowUp}
         </button>
       )}
@@ -423,6 +424,11 @@ function App() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingPhrases, setLoadingPhrases] = useState([])
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0)
+  // { baseQuery, topic } while the intake panel is open, null while closed.
+  // topic is the extracted destination for a fresh destination-style search,
+  // or null when opened via the itinerary CTA (the destination already lives
+  // in conversation history there, not in baseQuery — see handleItineraryCta).
+  const [intakeContext, setIntakeContext] = useState(null)
   // Computed once at mount (not in an effect) so the video never flashes in
   // for mobile/reduced-motion visitors who should only ever see the poster.
   const [showHeroVideo] = useState(
@@ -544,9 +550,45 @@ function App() {
     runSearch(turn.query, { bypassCache: true, retryId: turn.id })
   }
 
+  // Destination-style searches ("Kyoto", "trip to Lisbon") open the intake
+  // panel instead of generating immediately — extractTopic doubles as that
+  // detector (it already excludes fact-check-shaped questions via
+  // TOPIC_EXCLUDE_WORDS), and its result becomes the panel's `topic`.
+  // Anything else (a follow-up question, "is X still open") skips straight
+  // to runSearch, unchanged.
   function handleSearch(event) {
     event.preventDefault()
-    runSearch(query)
+    const trimmed = query.trim()
+    if (!trimmed) return
+    const topic = extractTopic(trimmed)
+    if (topic) {
+      setIntakeContext({ baseQuery: trimmed, topic })
+      return
+    }
+    runSearch(trimmed)
+  }
+
+  // The guaranteed itinerary CTA always opens the panel too — topic is null
+  // here since ctaQuery is just the fixed CTA phrase, not a destination; the
+  // actual destination reaches the model via conversation history the same
+  // way it already does for any other follow-up (see runSearch).
+  function handleItineraryCta(ctaQuery) {
+    setIntakeContext({ baseQuery: ctaQuery, topic: null })
+  }
+
+  function handleIntakeSubmit(composedQuery) {
+    setIntakeContext(null)
+    runSearch(composedQuery)
+  }
+
+  function handleIntakeSkip() {
+    const raw = intakeContext?.baseQuery
+    setIntakeContext(null)
+    if (raw) runSearch(raw)
+  }
+
+  function handleIntakeCancel() {
+    setIntakeContext(null)
   }
 
   function clearQuery() {
@@ -644,7 +686,7 @@ function App() {
                   <TurnAnswer
                     result={turn.result}
                     itineraryFollowUp={turn.id === lastTurn?.id ? itineraryFollowUp : null}
-                    onSelectFollowUp={runSearch}
+                    onItineraryCta={handleItineraryCta}
                   />
                 )}
               </div>
@@ -676,6 +718,15 @@ function App() {
         fold, in normal flow, with its own solid background — and only on
         the landing state, matching where <RecentTrips> also hides. */}
     {thread.length === 0 && <DiscoverFeed />}
+    {intakeContext && (
+      <IntakePanel
+        baseQuery={intakeContext.baseQuery}
+        topic={intakeContext.topic}
+        onSubmit={handleIntakeSubmit}
+        onSkip={handleIntakeSkip}
+        onCancel={handleIntakeCancel}
+      />
+    )}
     </>
   )
 }

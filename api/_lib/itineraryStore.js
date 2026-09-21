@@ -165,7 +165,13 @@ export async function listExploreTrips() {
 // revisionKind is null for an original save, 'reverify' for a re-verify
 // child, or 'edit' for a manually-edited fork — always paired with
 // sourceSlug (see trip-reverify.js and trip-edit.js), never set alone.
-export async function saveItinerary({ query, payload, sourceSlug = null, revisionKind = null }) {
+//
+// owner is null for an anonymous save (the default, and the only option
+// before Supabase Auth existed) or a signed-in user's id when the request
+// carried a valid session — see api/_lib/supabaseAuth.js. Never required:
+// search and generation stay fully anonymous regardless of auth state, this
+// just attributes the row to an account when one is available.
+export async function saveItinerary({ query, payload, sourceSlug = null, revisionKind = null, owner = null }) {
   const supabase = getSupabase()
   if (!supabase) return null
 
@@ -181,6 +187,7 @@ export async function saveItinerary({ query, payload, sourceSlug = null, revisio
     verified_at: now,
     source_slug: sourceSlug,
     revision_kind: revisionKind,
+    owner,
   })
 
   if (error) {
