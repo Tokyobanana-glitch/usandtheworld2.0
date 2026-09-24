@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from './services/supabaseClient'
 import { getRecentTrips, removeRecentTrip } from './services/recentTrips'
+import PageHeader from './components/PageHeader'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
@@ -87,8 +88,8 @@ export default function TripsPage() {
 
   return (
     <main className="trips-page">
+      <PageHeader variant="large" title="Travel" />
       <div className="explore-header">
-        <h1>Your trips</h1>
         <p className="explore-subtitle">
           {user
             ? 'Trips saved to your account, plus anything searched on this device.'

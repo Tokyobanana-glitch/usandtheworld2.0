@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from './services/supabaseClient'
 import { downscaleImage } from './utils/downscaleImage'
+import PageHeader from './components/PageHeader'
 
 const SIGNED_URL_TTL_SECONDS = 300 // short-lived on purpose — the bucket is private; a link that lasts is a link that can leak
 
@@ -45,8 +46,8 @@ export default function PassportPage() {
   if (!user) {
     return (
       <main className="passport-page">
+        <PageHeader variant="large" title="Passport" />
         <div className="explore-header">
-          <h1>Passport</h1>
           <p className="explore-subtitle">A record of the places you've actually been — a stamp for every stop, with photos and notes.</p>
         </div>
         <div className="tab-auth-pitch">
@@ -240,8 +241,8 @@ function SignedInPassport({ userId }) {
 
   return (
     <main className="passport-page">
+      <PageHeader variant="large" title="Passport" />
       <div className="explore-header">
-        <h1>Passport</h1>
         <p className="explore-subtitle">Every place you've actually been.</p>
       </div>
 

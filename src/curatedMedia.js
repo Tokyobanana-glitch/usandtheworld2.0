@@ -11,6 +11,20 @@
 // ~15 lines here is cheaper than restructuring it to be safely isomorphic.
 const WIKIPEDIA_SUMMARY_URL = 'https://en.wikipedia.org/api/rest_v1/page/summary/'
 
+// Slugifies a city name into the token curatedHeroUrl/curatedCardUrl expect
+// — lowercase, diacritics stripped (e.g. "Reykjavík" -> "reykjavik"), spaces
+// and punctuation collapsed to single hyphens. Every explore_briefs city
+// name passes through this before hitting the curated-image tier.
+export function citySlug(city) {
+  return city
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export function curatedHeroUrl(slug) {
   return `/destinations/${slug}-hero.jpg`
 }

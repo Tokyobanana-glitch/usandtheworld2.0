@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { askTravelAssistant } from './services/travelAssistant'
 import { addRecentTrip } from './services/recentTrips'
 import { useBucketListQuickSave } from './hooks/useBucketListPlaceKeys'
 import { computeVerificationSummary, computeDaySummary, formatBreakdown, formatCheckDate } from './itineraryUtils'
+import PageHeader from './components/PageHeader'
 import RecentTrips from './RecentTrips'
 import RotatingTagline from './RotatingTagline'
-import DiscoverFeed from './DiscoverFeed'
-import ExploreBriefs from './ExploreBriefs'
+import ExploreContent from './ExploreContent'
 import IntakePanel from './IntakePanel'
 import './App.css'
 
@@ -688,9 +687,14 @@ function App() {
       </div>
       <div className="earth-overlay" aria-hidden="true" />
 
-      <Link to="/explore" className="trip-page-home-link hero-explore-link">
-        All verified trips
-      </Link>
+      {/* Explore's title slot is filled by the search hero itself, per
+          design-reference/DESIGN_REFERENCE.md — this centered PageHeader
+          contributes only the profile icon (otherwise unreachable on
+          mobile, where TopNav is hidden — see TopNav.css), floated over the
+          video as its own stacking layer above earth-bg/earth-overlay. */}
+      <div className="hero-page-header">
+        <PageHeader variant="centered" title="Explore" />
+      </div>
 
       <div className="hero-content">
         <form className="search-bar" onSubmit={handleSearch} role="search">
@@ -777,8 +781,7 @@ function App() {
         stretch the video over a much taller page. This lives below the
         fold, in normal flow, with its own solid background — and only on
         the landing state, matching where <RecentTrips> also hides. */}
-    {thread.length === 0 && <ExploreBriefs onBuildItinerary={handleBuildItineraryFromBrief} />}
-    {thread.length === 0 && <DiscoverFeed />}
+    {thread.length === 0 && <ExploreContent onBuildItinerary={handleBuildItineraryFromBrief} />}
     {intakeContext && (
       <IntakePanel
         baseQuery={intakeContext.baseQuery}

@@ -36,11 +36,29 @@
   background: linear-gradient(to bottom, rgba(5, 8, 19, 0.1) 0%, rgba(5, 8, 19, 0.25) 40%, rgba(5, 8, 19, 0.85) 100%);
 }
 
-.hero-explore-link {
+/* Overlays the search hero's video, above earth-bg (z-index 0) and
+   earth-overlay (z-index 1) but below nothing else that lives in this
+   container — see App.jsx. PageHeader's own title/profile-icon layout is
+   unchanged; this only lifts it into its own stacking position. */
+.hero-page-header {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  z-index: 2;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+}
+
+.hero-page-header .page-header-title {
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* TopNav (see TopNav.css) takes over at this same breakpoint and already
+   carries its own profile icon — this overlay exists only to fill the
+   mobile gap TopNav leaves. */
+@media (min-width: 768px) {
+  .hero-page-header {
+    display: none;
+  }
 }
 
 .hero-content {
@@ -65,6 +83,11 @@
   background: rgba(236, 236, 240, 0.94);
   border-radius: 12px;
   padding: 16px 20px;
+  /* width:100% sets the content box, not the border box, by default — on a
+     narrow viewport this padding alone pushed the bar ~40px past its
+     container's edge (found verifying at 390px, see CLAUDE.md's working
+     style note). */
+  box-sizing: border-box;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
 
@@ -1747,6 +1770,17 @@ a.status-chip:hover {
   color: #f2f2f5;
 }
 
+/* Where PageHeader (--space-6 top padding, 32px — the same value as this
+   container's own top padding) is the very first thing rendered — the tab
+   root views, never the back-button drill-ins below (BucketListDetail,
+   PassportEntryForm/PassportDetail, which keep the container's original
+   padding) — cancel the container's own padding so the two don't stack. */
+.bucket-list-page > .page-header--large:first-child,
+.passport-page > .page-header--large:first-child,
+.trips-page > .page-header--large:first-child {
+  margin: -32px -20px 0;
+}
+
 .tab-auth-pitch {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -2260,139 +2294,4 @@ a.status-chip:hover {
   font-size: 12.5px;
   color: #c084fc;
   white-space: nowrap;
-}
-
-/* Explore briefs (Phase 4, overnight build) — editorial "why go now" cards.
-   Same solid background as .discover-feed for an invisible seam between
-   sections, same 16px radius as every other tab's cards. No image_url yet
-   (generated separately later), so no gradient scrim needed here — nothing
-   sits on top of a photo in this card. */
-.explore-briefs {
-  background: #050813;
-  padding: 8px 20px 24px;
-}
-
-.explore-briefs-inner {
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-.explore-briefs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.explore-brief-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 20px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.explore-brief-city {
-  font-family: var(--serif);
-  font-size: 20px;
-  color: #fff;
-}
-
-.explore-brief-country {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: -6px;
-}
-
-.explore-brief-why {
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 4px 0 0;
-}
-
-.explore-brief-highlights {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.explore-brief-highlights strong {
-  color: #fff;
-  font-weight: 600;
-}
-
-.explore-brief-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.explore-brief-chip {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 999px;
-  padding: 3px 9px;
-}
-
-.explore-brief-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  margin-top: 8px;
-  background: #c084fc;
-  border: none;
-  color: #1a0b2e;
-  font-weight: 600;
-  font-size: 13.5px;
-  border-radius: 999px;
-  padding: 10px 16px;
-  cursor: pointer;
-  text-align: center;
-}
-
-.explore-brief-cta:hover {
-  background: #d8b4fe;
-}
-
-.explore-brief-sources {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.explore-brief-sources summary {
-  cursor: pointer;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-}
-
-.explore-brief-sources ul {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.explore-brief-sources a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: #c084fc;
-  text-decoration: none;
-}
-
-.explore-brief-sources a:hover {
-  text-decoration: underline;
 }

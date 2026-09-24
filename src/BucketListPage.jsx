@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from './services/supabaseClient'
 import { createPassportEntryFromPlace } from './services/quickSaves'
+import PageHeader from './components/PageHeader'
 import DiscoverFeed from './DiscoverFeed'
 
 // Reads and writes bucket_lists / bucket_list_items directly through the
@@ -18,8 +19,8 @@ export default function BucketListPage() {
   if (!user) {
     return (
       <main className="bucket-list-page">
+        <PageHeader variant="large" title="Bucket List" />
         <div className="explore-header">
-          <h1>Bucket List</h1>
           <p className="explore-subtitle">Save the places you want to go — across every trip you're dreaming up, in one list.</p>
         </div>
         <div className="tab-auth-pitch">
@@ -242,8 +243,8 @@ function SignedInBucketList({ userId }) {
 
   return (
     <main className="bucket-list-page">
+      <PageHeader variant="large" title="Bucket List" />
       <div className="explore-header">
-        <h1>Bucket List</h1>
         <p className="explore-subtitle">Places you want to go, organized however you like.</p>
       </div>
 

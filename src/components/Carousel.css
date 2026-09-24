@@ -42,6 +42,22 @@
   max-width: 260px;
 }
 
+.carousel--full-bleed {
+  scroll-snap-type: x mandatory;
+  padding-inline: 0;
+}
+
+.carousel--full-bleed .carousel-track {
+  width: auto;
+  gap: 0;
+}
+
+.carousel--full-bleed .carousel-track > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  width: 100vw;
+}
+
 .carousel-card {
   display: flex;
   flex-direction: column;

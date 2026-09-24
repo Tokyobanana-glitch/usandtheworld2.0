@@ -1,0 +1,149 @@
+/* Same solid page background as the hero above it, so the seam where the
+   video ends and the tabs begin is invisible. */
+.explore-tabs {
+  background: var(--color-page-bg);
+}
+
+.explore-tab-panel {
+  padding: var(--space-5) 0 var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.explore-trending-panel {
+  padding: var(--space-5) 0 var(--space-7);
+}
+
+.explore-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.explore-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-5);
+}
+
+.explore-section-heading {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: var(--font-size-section-heading);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.explore-section-subtitle {
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.explore-section-see-all {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-accent);
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.explore-section-see-all:hover {
+  color: var(--color-accent-hover);
+}
+
+/* Guides tab — a vertical feed of full briefs. Each item is a HeroCard
+   (photo + city name + why-now excerpt + CTA, edge to edge, no side
+   padding) followed directly by guide-card-extra on the same charcoal
+   ground, so the two read as one continuous card rather than two stacked
+   ones. */
+.guide-feed {
+  gap: var(--space-7);
+}
+
+.guide-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.guide-card-extra {
+  background: var(--color-card-bg);
+  padding: 0 var(--space-5) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.guide-highlights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.guide-highlights strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.guide-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.guide-chip {
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+}
+
+.guide-sources {
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-muted);
+}
+
+.guide-sources summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+}
+
+.guide-sources ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.guide-sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.guide-sources a:hover {
+  color: var(--color-accent-hover);
+}
