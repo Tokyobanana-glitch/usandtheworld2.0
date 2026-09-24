@@ -21,15 +21,10 @@ export async function fetchBucketListPlaceKeys() {
 
 const DEFAULT_LIST_NAME = 'My Places'
 
-// Quiet save from an itinerary stop — no list picker; uses the traveler's
-// oldest list (their de facto "main" one) if they have any, or creates one
-// on first use. The stop already carries lat/lng/placeKey from its own
-// geocoding pass (see api/_lib/geocode.js), so this never calls the geocode
-// endpoint again.
-export async function saveStopToBucketList(userId, stop) {
-  const supabase = getSupabaseClient()
-  if (!supabase) return null
-
+// Shared by saveStopToBucketList and addPlaceToNewBucketList (Bucket List's
+// inspiration-carousel heart, when the traveler has no list yet) — both want
+// "the oldest list, or create one" and previously duplicated this lookup.
+async function findOrCreateDefaultList(supabase, userId) {
   const { data: lists, error: listsError } = await supabase
     .from('bucket_lists')
     .select('id')
@@ -39,20 +34,31 @@ export async function saveStopToBucketList(userId, stop) {
     console.error('bucket_lists lookup error:', listsError)
     return null
   }
+  if (lists?.[0]?.id) return lists[0].id
 
-  let listId = lists?.[0]?.id
-  if (!listId) {
-    const { data: created, error: createError } = await supabase
-      .from('bucket_lists')
-      .insert({ owner: userId, name: DEFAULT_LIST_NAME })
-      .select()
-      .single()
-    if (createError) {
-      console.error('bucket_lists auto-create error:', createError)
-      return null
-    }
-    listId = created.id
+  const { data: created, error: createError } = await supabase
+    .from('bucket_lists')
+    .insert({ owner: userId, name: DEFAULT_LIST_NAME })
+    .select()
+    .single()
+  if (createError) {
+    console.error('bucket_lists auto-create error:', createError)
+    return null
   }
+  return created.id
+}
+
+// Quiet save from an itinerary stop — no list picker; uses the traveler's
+// oldest list (their de facto "main" one) if they have any, or creates one
+// on first use. The stop already carries lat/lng/placeKey from its own
+// geocoding pass (see api/_lib/geocode.js), so this never calls the geocode
+// endpoint again.
+export async function saveStopToBucketList(userId, stop) {
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+
+  const listId = await findOrCreateDefaultList(supabase, userId)
+  if (!listId) return null
 
   const { data: item, error: itemError } = await supabase
     .from('bucket_list_items')
@@ -71,6 +77,59 @@ export async function saveStopToBucketList(userId, stop) {
     return null
   }
   return item
+}
+
+async function geocodePlace(name, city) {
+  try {
+    const res = await fetch('/api/trip-edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'geocode-place', name, city }),
+    })
+    if (res.ok) return await res.json()
+  } catch (err) {
+    console.error('geocode-place request failed:', err)
+  }
+  return { lat: null, lng: null, placeKey: null }
+}
+
+// Named-place save that geocodes itself — unlike saveStopToBucketList, the
+// place here (a manually typed one from BucketListDetail's add-place form,
+// or a famous-place highlight from the inspiration carousel) has no
+// lat/lng/placeKey yet. A place that fails to geocode still saves, same
+// graceful degradation as an unlocatable itinerary stop.
+export async function addPlaceToBucketList(listId, { name, city }) {
+  const geocoded = await geocodePlace(name, city)
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('bucket_list_items')
+    .insert({
+      list_id: listId,
+      place_name: name,
+      city: city || null,
+      lat: geocoded.lat ?? null,
+      lng: geocoded.lng ?? null,
+      place_key: geocoded.placeKey ?? null,
+    })
+    .select()
+    .single()
+  if (error) {
+    console.error('bucket_list_items insert error:', error)
+    return null
+  }
+  return data
+}
+
+// Inspiration carousel's heart, when the traveler has no list yet — finds
+// or creates their default list, same as saveStopToBucketList, then geocodes
+// and inserts the place like addPlaceToBucketList.
+export async function addPlaceToNewBucketList(userId, { name, city }) {
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+  const listId = await findOrCreateDefaultList(supabase, userId)
+  if (!listId) return null
+  return addPlaceToBucketList(listId, { name, city })
 }
 
 // Used by both "Travel -> Passport" (TripPage.jsx, one call per confirmed

@@ -1,0 +1,369 @@
+/* Bucket List ← Amex Wishlists (design-reference/DESIGN_REFERENCE.md). Runs
+   edge to edge like Explore — no page-level max-width or side padding, see
+   App.css's .explore-tabs/.explore-tab-panel for the same convention — so
+   individual sections apply their own var(--space-5) side padding instead.
+   Reuses .explore-empty/.result-error/.intake-notes-input/.intake-submit-btn/
+   .bucket-list-back/.bucket-list-icon-btn/.bucket-list-detail-title-row from
+   App.css (shared with Passport, which isn't part of this pass) and
+   .explore-section-heading/.explore-section-subtitle from ExploreContent.css
+   (always loaded — App.jsx imports ExploreContent eagerly, unlike this
+   lazy-loaded page's own chunk). */
+.bucket-list-page {
+  background: var(--color-page-bg);
+  padding-bottom: var(--space-7);
+}
+
+.bucket-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.bucket-list-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--space-5);
+}
+
+.bucket-list-new-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+
+.bucket-list-new-link:hover {
+  color: var(--color-accent-hover);
+}
+
+/* List-of-lists grid — cover photo + serif name + place count, the reference's
+   generic "photo card" treatment applied to a list rather than a place. */
+.bucket-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+}
+
+.bucket-list-cover-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card-bg);
+  border: none;
+  border-radius: var(--radius-tile);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.bucket-list-cover-card-image {
+  border-radius: 0;
+}
+
+.bucket-list-cover-card-footer {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bucket-list-cover-card-name {
+  font-family: var(--serif);
+  font-size: 17px;
+  color: var(--color-text-primary);
+}
+
+.bucket-list-cover-card-meta {
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-secondary);
+}
+
+/* "Need inspiration?" — a left-aligned carousel of famous places drawn from
+   explore_briefs highlights, each with a round heart button that adds it to
+   a list. See BucketListPage.jsx's flattenHighlights/handleHeart. */
+.bucket-list-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-5);
+  margin-bottom: var(--space-3);
+}
+
+.bucket-list-inspire-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card-bg);
+  border-radius: var(--radius-hero);
+  overflow: hidden;
+}
+
+.bucket-list-inspire-card-media {
+  position: relative;
+}
+
+.bucket-list-inspire-card-image {
+  border-radius: 0;
+}
+
+.bucket-list-heart-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 19, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.bucket-list-heart-btn--added {
+  color: var(--color-accent);
+}
+
+.bucket-list-heart-btn:disabled {
+  cursor: default;
+}
+
+.bucket-list-inspire-card-footer {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bucket-list-inspire-card-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  color: var(--color-text-primary);
+}
+
+.bucket-list-inspire-card-place {
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-secondary);
+}
+
+.bucket-list-get-inspired {
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--space-5);
+}
+
+.bucket-list-get-inspired-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-accent);
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.bucket-list-get-inspired-link:hover {
+  color: var(--color-accent-hover);
+}
+
+/* Create-list / pick-a-list sheets (BottomSheet bodies). */
+.bucket-list-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bucket-list-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bucket-list-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-card-bg);
+  border: none;
+  border-radius: var(--radius-tile);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.bucket-list-picker-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bucket-list-picker-option-name {
+  font-family: var(--serif);
+  font-size: 17px;
+}
+
+.bucket-list-picker-option-meta {
+  flex-shrink: 0;
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-secondary);
+}
+
+/* Inside a list — back button, rename/delete (.bucket-list-back/
+   .bucket-list-icon-btn/.bucket-list-detail-title-row are shared with
+   Passport in App.css), add-place form, and items as photo cards. */
+.bucket-list-detail-header {
+  padding: var(--space-6) var(--space-5) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bucket-list-detail-rename-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bucket-list-detail-rename-form .intake-notes-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.bucket-list-detail-body {
+  padding: 0 var(--space-5) var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.bucket-list-add-place {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.bucket-list-add-place .intake-notes-input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.bucket-list-add-place .intake-submit-btn {
+  flex: 1 1 140px;
+  white-space: nowrap;
+}
+
+.bucket-list-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.bucket-list-item-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card-bg);
+  border-radius: var(--radius-hero);
+  overflow: hidden;
+}
+
+.bucket-list-item-image {
+  border-radius: 0;
+}
+
+.bucket-list-item-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bucket-list-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bucket-list-item-name {
+  font-family: var(--serif);
+  font-size: 19px;
+  color: var(--color-text-primary);
+}
+
+.bucket-list-item-city {
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-secondary);
+}
+
+.bucket-list-item-unlocatable {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.bucket-list-item-note {
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-text-primary);
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  border-radius: var(--radius-tile);
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+
+.bucket-list-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.bucket-list-mark-visited {
+  flex-shrink: 0;
+  min-height: 44px;
+  background: none;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: var(--color-accent);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bucket-list-mark-visited:hover {
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.bucket-list-mark-visited:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bucket-list-item-visited {
+  flex-shrink: 0;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
