@@ -1757,48 +1757,18 @@ a.status-chip:hover {
   margin: 0;
 }
 
-/* Passport — reuses .explore-header/.explore-empty/.intake-notes-input/
-   .intake-submit-btn/.result-error from elsewhere in this file; the classes
-   below are only the pieces specific to this tab. Bucket List has its own
-   container rules now (see BucketListPage.css — it runs edge to edge, per
-   design-reference/DESIGN_REFERENCE.md's Bucket List section, so it no
-   longer shares this constrained-width container). 16px radius (vs. the
-   14px .explore-card and 12px .trips-page-item use) is this feature's own
-   spec, not a mismatch — see the tab's design brief. */
-.passport-page {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 32px 20px 80px;
-  color: #f2f2f5;
-}
-
-/* Where PageHeader (--space-6 top padding, 32px — the same value as this
-   container's own top padding) is the very first thing rendered — the tab
-   root views, never the back-button drill-ins below (PassportEntryForm/
-   PassportDetail, which keep the container's original padding) — cancel
-   the container's own padding so the two don't stack. */
-.passport-page > .page-header--large:first-child,
+/* Passport now has its own container rules (see PassportPage.css — it runs
+   edge to edge for its stats/hero/book sections, per
+   design-reference/DESIGN_REFERENCE.md's Passport section), same as Bucket
+   List's BucketListPage.css. This override still applies to it (PassportPage
+   renders the "passport-page" class from its own stylesheet, but PageHeader
+   itself is this shared component either way). */
 .trips-page > .page-header--large:first-child {
   margin: -32px -20px 0;
 }
 
-.tab-auth-pitch {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 32px;
-}
-
-.tab-auth-pitch p {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.75);
-  margin: 0 0 16px;
-  line-height: 1.5;
-}
-
 /* Shared with Bucket List (see BucketListPage.jsx/.css) and Passport
-   (PassportPage.jsx) — a back link, an icon-only action button, and the
+   (PassportPage.jsx/.css) — a back link, an icon-only action button, and the
    detail-view title row with its rename/delete icon buttons. */
 .bucket-list-icon-btn {
   flex-shrink: 0;
@@ -1841,180 +1811,6 @@ a.status-chip:hover {
   margin: 0;
   color: #fff;
   flex: 1;
-}
-
-/* Passport — "stamps" grid. Reuses .bucket-list-back/.bucket-list-icon-btn/
-   .bucket-list-detail-title-row/.intake-notes-input/.intake-submit-btn/
-   .intake-field-label/.result-error; only the pieces specific to this tab
-   are below. Same 16px radius as Bucket List's own cards. */
-.passport-add-btn {
-  width: 100%;
-  margin-bottom: 24px;
-}
-
-.passport-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 14px;
-}
-
-.passport-stamp-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 10px;
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  min-height: 44px;
-}
-
-.passport-stamp-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.28);
-}
-
-.passport-stamp-image {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 10px;
-}
-
-.passport-stamp-placeholder {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(192, 132, 252, 0.28), rgba(192, 132, 252, 0.06));
-}
-
-.passport-stamp-name {
-  font-family: var(--serif);
-  font-size: 15px;
-  color: #fff;
-  margin-top: 4px;
-}
-
-.passport-stamp-date {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.passport-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.passport-note-input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #f2f2f5;
-  font-size: 14px;
-  border-radius: 10px;
-  padding: 10px 14px;
-  box-sizing: border-box;
-  font-family: inherit;
-  resize: vertical;
-}
-
-.passport-photo-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.passport-photo-picker-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #f2f2f5;
-  font-size: 14px;
-  border-radius: 999px;
-  padding: 10px 16px;
-  cursor: pointer;
-  width: fit-content;
-}
-
-/* Native file input visually hidden but still keyboard/screen-reader
-   reachable via the wrapping label — the label is the styled control. */
-.passport-photo-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-}
-
-.passport-upload-queue {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.passport-upload-queue-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.passport-upload-queue-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.passport-upload-queue-status {
-  flex-shrink: 0;
-  color: #c084fc;
-}
-
-.passport-upload-note {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.passport-detail-photos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 8px;
-  margin: 16px 0;
-}
-
-.passport-detail-photo {
-  position: relative;
-}
-
-.passport-detail-photo img,
-.passport-detail-photo .passport-stamp-placeholder {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 10px;
-}
-
-.passport-detail-photo-remove {
-  position: absolute;
-  top: 0;
-  right: 0;
-  min-width: 44px;
-  min-height: 44px;
-  background: rgba(3, 4, 10, 0.72);
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Phase 2 (overnight build) — tab cross-links: Bucket List <-> itinerary

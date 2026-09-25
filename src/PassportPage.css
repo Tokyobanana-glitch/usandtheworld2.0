@@ -1,0 +1,503 @@
+/* Passport ← Amex Book (design-reference/DESIGN_REFERENCE.md). Runs edge to
+   edge like Bucket List (see BucketListPage.css) — no page-level max-width,
+   individual sections apply their own var(--space-5) side padding. Reuses
+   .explore-empty/.explore-subtitle/.explore-section-heading/
+   .explore-section-subtitle/.result-error/.intake-notes-input/
+   .intake-submit-btn/.intake-field-label/.bucket-list-back/
+   .bucket-list-icon-btn/.bucket-list-detail-title-row from App.css (eagerly
+   loaded — App.jsx's own bundle). Deliberately NOT reusing Bucket List's own
+   .bucket-list-new-link (BucketListPage.css) even though it's visually
+   identical — that stylesheet is Bucket List's own lazy-loaded chunk, so
+   Passport gets its own .passport-link-btn instead rather than depending on
+   another tab's chunk having already loaded. The classes below are only the
+   pieces specific to this tab. */
+.passport-page {
+  background: var(--color-page-bg);
+  padding-bottom: var(--space-7);
+}
+
+/* Where PageHeader (--space-6 top padding) is the very first thing rendered
+   — the tab's own home view, never the back-button drill-ins below (the add
+   form / detail view, which use their own header markup) — there's nothing
+   to cancel here (unlike the old constrained-width container this tab used
+   to share with Trips), so this is intentionally a no-op placeholder for
+   symmetry with those other views' own header blocks below. */
+
+.passport-loading {
+  padding: 0 var(--space-5);
+}
+
+.passport-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.passport-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--space-5);
+}
+
+/* Local equivalent of Bucket List's .bucket-list-new-link — see the comment
+   at the top of this file for why this isn't just reused directly. */
+.passport-link-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+
+.passport-link-btn:hover {
+  color: var(--color-accent-hover);
+}
+
+/* Three stat tiles — Amex's Flights/Hotels/Cars row, translated into real
+   counts from the traveler's own entries (see PassportPage.jsx's `stats`). */
+.passport-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+}
+
+.passport-stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-card-bg);
+  border-radius: var(--radius-tile);
+  padding: var(--space-3) var(--space-2);
+}
+
+.passport-stat-icon {
+  color: var(--color-accent);
+  display: flex;
+}
+
+.passport-stat-value {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--color-text-primary);
+}
+
+.passport-stat-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* Full-width rounded hero card for the most recent stamp — same
+   position:relative + absolute scrim + absolute overlay body shape as
+   PosterCard (see PosterCard.css), just with a taller portrait ratio and a
+   fuller text block instead of a single pill. */
+.passport-hero-card {
+  position: relative;
+  display: block;
+  width: calc(100% - var(--space-5) * 2);
+  margin: 0 var(--space-5);
+  border: none;
+  border-radius: var(--radius-hero);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.passport-hero-card-image {
+  border-radius: 0;
+}
+
+/* Unlike the book pages below (landscape 4:3 — still reads fine full-width
+   on a wide screen), this card's portrait 4:5 ratio would grow absurdly
+   tall if it kept stretching edge to edge on desktop — capped the same way
+   Carousel.css already caps its own card widths at that breakpoint. */
+@media (min-width: 768px) {
+  .passport-hero-card {
+    max-width: 420px;
+  }
+}
+
+.passport-hero-card-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim-bottom);
+  pointer-events: none;
+}
+
+.passport-hero-card-body {
+  position: absolute;
+  left: var(--space-5);
+  right: var(--space-5);
+  bottom: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.passport-hero-card-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--color-text-primary);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: var(--font-size-meta);
+}
+
+.passport-hero-card-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: var(--font-size-hero-serif);
+  line-height: 1.15;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.passport-hero-card-date {
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+/* The book — swiped horizontally with native scroll-snap so each swipe
+   lands on a page (see PassportPage.jsx's PassportBook: no JS drives the
+   swipe itself, only the page-indicator readout). overflow-x is the only
+   overflow set, same rule as Carousel.css — a vertical swipe starting over
+   the book still scrolls the page. */
+.passport-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+  margin-bottom: var(--space-3);
+}
+
+.passport-section-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.passport-book-track {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-inline: var(--space-5);
+}
+
+.passport-book-track::-webkit-scrollbar {
+  display: none;
+}
+
+.passport-book-page {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.passport-book-page-media {
+  position: relative;
+  border-radius: var(--radius-hero);
+  overflow: hidden;
+  background: var(--color-card-bg);
+}
+
+.passport-book-page-image {
+  border-radius: 0;
+}
+
+.passport-book-page-note {
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0;
+  padding: 0 var(--space-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.passport-book-indicator {
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  margin: var(--space-3) 0 0;
+}
+
+/* The "inked, bordered, slightly rotated" stamp mark — an ink-look built
+   entirely from the existing accent token (see index.css), not a new
+   palette entry: a double ring (border + inset box-shadow) and a rotated
+   transform, overlaid on the cover photo's top-right corner like a real
+   passport stamp sits over a photo page. */
+.passport-stamp-mark {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 108px;
+  padding: var(--space-2);
+  border: 2px solid var(--color-accent);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 3px rgba(192, 132, 252, 0.35);
+  background: rgba(5, 8, 19, 0.55);
+  text-align: center;
+}
+
+.passport-stamp-mark-place {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  line-height: 1.25;
+}
+
+.passport-stamp-mark-country,
+.passport-stamp-mark-date {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  opacity: 0.85;
+}
+
+/* "View all" grid — same tile shape Bucket List's own grid uses (see
+   .bucket-list-cover-card in BucketListPage.css), applied to a stamp instead
+   of a list. */
+.passport-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+}
+
+.passport-tile {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card-bg);
+  border: none;
+  border-radius: var(--radius-tile);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.passport-tile-image {
+  border-radius: 0;
+}
+
+.passport-tile-name {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--color-text-primary);
+  margin: var(--space-2) var(--space-2) 0;
+}
+
+.passport-tile-date {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 2px var(--space-2) var(--space-2);
+}
+
+/* Add-stamp form / detail drill-ins — both keep the constrained-width feel
+   of a form, unlike the edge-to-edge sections above. */
+.passport-form-header,
+.passport-detail-header {
+  padding: var(--space-6) var(--space-5) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.passport-form-title {
+  font-family: var(--serif);
+  font-size: 30px;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.passport-share-btn {
+  align-self: flex-start;
+  min-height: 44px;
+  background: none;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: var(--color-accent);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.passport-share-btn:hover {
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.passport-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-7);
+}
+
+.passport-detail-body {
+  padding: 0 var(--space-5) var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.passport-note-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  border-radius: var(--radius-tile);
+  padding: 10px 14px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.passport-photo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.passport-photo-picker-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-text-primary);
+  font-family: var(--sans);
+  font-size: var(--font-size-body);
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  cursor: pointer;
+  width: fit-content;
+}
+
+/* Native file input visually hidden but still keyboard/screen-reader
+   reachable via the wrapping label — the label is the styled control. */
+.passport-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.passport-upload-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.passport-upload-queue-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.passport-upload-queue-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passport-upload-queue-status {
+  flex-shrink: 0;
+  color: var(--color-accent);
+}
+
+.passport-upload-note {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.passport-detail-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--space-2);
+}
+
+.passport-detail-photo {
+  position: relative;
+}
+
+.passport-detail-photo img,
+.passport-photo-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.passport-photo-placeholder {
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.28), rgba(192, 132, 252, 0.06));
+}
+
+.passport-detail-photo-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(3, 4, 10, 0.72);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.85);
+}

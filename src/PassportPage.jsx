@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from './services/supabaseClient'
 import { downscaleImage } from './utils/downscaleImage'
+import { illustrationUrl } from './curatedMedia'
 import PageHeader from './components/PageHeader'
+import EmptyState from './components/EmptyState'
+import Image from './components/Image'
+import './PassportPage.css'
 
 const SIGNED_URL_TTL_SECONDS = 300 // short-lived on purpose — the bucket is private; a link that lasts is a link that can leak
 
@@ -12,6 +16,18 @@ function formatDate(isoDate) {
   // UTC-midnight-then-shifted-a-day-back by the browser's own timezone.
   const [y, m, d] = isoDate.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+// The "most recent" stamp for the hero card and the book's own ordering is
+// by when the trip actually happened, not when the row was saved — falls
+// back to created_at only for an entry with no visited_on yet, so a freshly
+// logged trip with an unset date still sorts somewhere sane.
+function entryDateKey(entry) {
+  return entry.visited_on || entry.created_at
+}
+
+function sortByRecency(entries) {
+  return [...entries].sort((a, b) => new Date(entryDateKey(b)) - new Date(entryDateKey(a)))
 }
 
 async function signPhotoUrls(paths) {
@@ -28,6 +44,46 @@ async function signPhotoUrls(paths) {
     if (d.signedUrl && d.path) map[d.path] = d.signedUrl
   })
   return map
+}
+
+function GlobeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <ellipse cx="12" cy="12" rx="3.6" ry="8.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <line x1="3.5" y1="12" x2="20.5" y2="12" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}
+
+function CityIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <rect x="4" y="9" width="6" height="11" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="13" y="4" width="7" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <line x1="6.3" y1="12" x2="6.3" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="15.3" y1="7.5" x2="15.3" y2="7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="15.3" y1="11" x2="15.3" y2="11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M4 8.5h3l1.4-2h7.2l1.4 2h3v11H4z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="12" cy="14" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}
+
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="currentColor" />
+      <circle cx="12" cy="9" r="2.4" fill="var(--color-page-bg)" />
+    </svg>
+  )
 }
 
 // Reads and writes passport_entries / passport_photos directly through the
@@ -47,14 +103,15 @@ export default function PassportPage() {
     return (
       <main className="passport-page">
         <PageHeader variant="large" title="Passport" />
-        <div className="explore-header">
-          <p className="explore-subtitle">A record of the places you've actually been — a stamp for every stop, with photos and notes.</p>
-        </div>
-        <div className="tab-auth-pitch">
-          <p>Sign in to start your passport. It's saved to your account, so it travels with you across devices.</p>
-          <button type="button" className="intake-submit-btn" onClick={requestSignIn}>
-            Sign in to get started
-          </button>
+        <div className="passport-body">
+          <EmptyState
+            illustrationSrc={illustrationUrl('passport')}
+            title="Sign in to start your passport"
+            description="It's saved to your account, so it travels with you across devices."
+            ctaLabel="Sign in"
+            onCtaClick={requestSignIn}
+            card
+          />
         </div>
       </main>
     )
@@ -64,7 +121,8 @@ export default function PassportPage() {
 }
 
 function SignedInPassport({ userId }) {
-  const [view, setView] = useState('grid') // 'grid' | 'form' | 'detail'
+  const [view, setView] = useState('home') // 'home' | 'form' | 'detail'
+  const [bookLayout, setBookLayout] = useState('book') // 'book' | 'grid' — "View all" toggle, home view only
   const [entries, setEntries] = useState([])
   const [photosByEntry, setPhotosByEntry] = useState({})
   const [loading, setLoading] = useState(true)
@@ -108,8 +166,10 @@ function SignedInPassport({ userId }) {
       grouped[p.entry_id].push({ ...p, url: null })
     })
 
-    // Only the cover (first) photo per entry is worth signing up front —
-    // the rest sign lazily when an entry is actually opened (see openEntry).
+    // Only the cover (first) photo per entry is worth signing up front — the
+    // stat tiles' photo count reads array length regardless of signed state,
+    // so it's accurate immediately; the rest sign lazily when an entry is
+    // actually opened (see openEntry).
     const coverPaths = loadedEntries.map((e) => grouped[e.id]?.[0]?.storage_path).filter(Boolean)
     const urlMap = await signPhotoUrls(coverPaths)
     Object.keys(grouped).forEach((entryId) => {
@@ -139,12 +199,12 @@ function SignedInPassport({ userId }) {
 
   async function handleCreated(entry, photos) {
     setEntries((prev) => [entry, ...prev])
-    setView('grid')
+    setView('home')
     if (photos.length === 0) {
       setPhotosByEntry((prev) => ({ ...prev, [entry.id]: [] }))
       return
     }
-    // Sign the cover (first) photo right away — otherwise the grid shows a
+    // Sign the cover (first) photo right away — otherwise the book shows a
     // placeholder for a stamp that was just created with a photo, until the
     // next full reload picks it up (see loadAll).
     const urlMap = await signPhotoUrls([photos[0].storage_path])
@@ -205,24 +265,27 @@ function SignedInPassport({ userId }) {
       delete next[entry.id]
       return next
     })
-    setView('grid')
+    setView('home')
     setSelectedEntryId(null)
   }
 
+  const sortedEntries = useMemo(() => sortByRecency(entries), [entries])
+
+  const stats = useMemo(() => {
+    const countries = new Set(entries.map((e) => e.country?.trim()).filter(Boolean))
+    const cities = new Set(entries.map((e) => e.city?.trim()).filter(Boolean))
+    const photos = Object.values(photosByEntry).reduce((sum, arr) => sum + arr.length, 0)
+    return { countries: countries.size, cities: cities.size, photos }
+  }, [entries, photosByEntry])
+
   if (view === 'form') {
-    return (
-      <PassportEntryForm
-        userId={userId}
-        onCancel={() => setView('grid')}
-        onCreated={handleCreated}
-      />
-    )
+    return <PassportEntryForm userId={userId} onCancel={() => setView('home')} onCreated={handleCreated} />
   }
 
   if (view === 'detail') {
     const entry = entries.find((e) => e.id === selectedEntryId)
     if (!entry) {
-      setView('grid')
+      setView('home')
       return null
     }
     return (
@@ -230,7 +293,7 @@ function SignedInPassport({ userId }) {
         entry={entry}
         photos={photosByEntry[entry.id] || []}
         userId={userId}
-        onBack={() => setView('grid')}
+        onBack={() => setView('home')}
         onUpdated={handleUpdated}
         onDelete={() => handleDelete(entry)}
         onPhotoAdded={(photo) => handlePhotoAdded(entry.id, photo)}
@@ -242,37 +305,175 @@ function SignedInPassport({ userId }) {
   return (
     <main className="passport-page">
       <PageHeader variant="large" title="Passport" />
-      <div className="explore-header">
-        <p className="explore-subtitle">Every place you've actually been.</p>
-      </div>
-
-      <button type="button" className="intake-submit-btn passport-add-btn" onClick={() => setView('form')}>
-        + Add a stamp
-      </button>
 
       {loading ? (
-        <p className="explore-empty">Loading your passport…</p>
+        <p className="explore-empty passport-loading">Loading your passport…</p>
       ) : entries.length === 0 ? (
-        <p className="explore-empty">No stamps yet — add your first place above.</p>
+        <div className="passport-body">
+          <EmptyState
+            illustrationSrc={illustrationUrl('passport')}
+            title="Your passport is empty"
+            description="Every place you actually visit becomes a page in your travel story."
+            ctaLabel="Add your first stamp"
+            onCtaClick={() => setView('form')}
+            card
+          />
+        </div>
       ) : (
-        <div className="passport-grid">
-          {entries.map((entry) => {
-            const cover = photosByEntry[entry.id]?.[0]
-            return (
-              <button key={entry.id} type="button" className="passport-stamp-card" onClick={() => openEntry(entry)}>
-                {cover?.url ? (
-                  <img src={cover.url} alt="" className="passport-stamp-image" />
-                ) : (
-                  <div className="passport-stamp-placeholder" aria-hidden="true" />
-                )}
-                <span className="passport-stamp-name">{entry.place_name}</span>
-                {entry.visited_on && <span className="passport-stamp-date">{formatDate(entry.visited_on)}</span>}
+        <div className="passport-body">
+          <div className="passport-toolbar">
+            <button type="button" className="passport-link-btn" onClick={() => setView('form')}>
+              + Add a stamp
+            </button>
+          </div>
+
+          <div className="passport-stats">
+            <StatTile icon={<GlobeIcon />} label="Countries" value={stats.countries} />
+            <StatTile icon={<CityIcon />} label="Cities" value={stats.cities} />
+            <StatTile icon={<CameraIcon />} label="Photos" value={stats.photos} />
+          </div>
+
+          <PassportHeroCard entry={sortedEntries[0]} cover={photosByEntry[sortedEntries[0].id]?.[0]} onOpen={() => openEntry(sortedEntries[0])} />
+
+          <div className="passport-book-section">
+            <div className="passport-section-header">
+              <div>
+                <h3 className="explore-section-heading">Your stamps</h3>
+                <p className="explore-section-subtitle">Swipe through your travels.</p>
+              </div>
+              <button type="button" className="passport-link-btn" onClick={() => setBookLayout(bookLayout === 'book' ? 'grid' : 'book')}>
+                {bookLayout === 'book' ? 'View all' : 'Book view'}
               </button>
-            )
-          })}
+            </div>
+
+            {bookLayout === 'book' ? (
+              <PassportBook entries={sortedEntries} photosByEntry={photosByEntry} onOpen={openEntry} />
+            ) : (
+              <div className="passport-tile-grid">
+                {sortedEntries.map((entry) => (
+                  <PassportTile key={entry.id} entry={entry} cover={photosByEntry[entry.id]?.[0]} onClick={() => openEntry(entry)} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>
+  )
+}
+
+function StatTile({ icon, label, value }) {
+  return (
+    <div className="passport-stat-tile">
+      <span className="passport-stat-icon">{icon}</span>
+      <span className="passport-stat-value">{value}</span>
+      <span className="passport-stat-label">{label}</span>
+    </div>
+  )
+}
+
+function PassportHeroCard({ entry, cover, onOpen }) {
+  return (
+    <button type="button" className="passport-hero-card" onClick={onOpen}>
+      <Image src={cover?.url} alt="" aspectRatio="4 / 5" className="passport-hero-card-image" priority />
+      <div className="passport-hero-card-scrim" aria-hidden="true" />
+      <div className="passport-hero-card-body">
+        {entry.city && (
+          <span className="passport-hero-card-eyebrow">
+            <PinIcon />
+            {entry.city}
+          </span>
+        )}
+        <h2 className="passport-hero-card-title">{entry.place_name}</h2>
+        {entry.visited_on && <p className="passport-hero-card-date">{formatDate(entry.visited_on)}</p>}
+      </div>
+    </button>
+  )
+}
+
+// Horizontal, native-scroll-snap book of stamp pages — one entry per page,
+// no JS drives the swipe itself, only the page indicator. IntersectionObserver
+// (rather than reading scrollLeft) tracks which page is centered, since it
+// stays correct regardless of each page's actual rendered width.
+function PassportBook({ entries, photosByEntry, onOpen }) {
+  const trackRef = useRef(null)
+  const pageRefs = useRef([])
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    const root = trackRef.current
+    if (!root) return undefined
+    const observer = new IntersectionObserver(
+      (observed) => {
+        const mostVisible = observed.filter((o) => o.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (!mostVisible) return
+        const idx = pageRefs.current.indexOf(mostVisible.target)
+        if (idx !== -1) setActiveIndex(idx)
+      },
+      { root, threshold: [0.5, 0.75, 1] },
+    )
+    pageRefs.current.forEach((el) => el && observer.observe(el))
+    return () => observer.disconnect()
+  }, [entries])
+
+  return (
+    <div className="passport-book">
+      <div className="passport-book-track" ref={trackRef}>
+        {entries.map((entry, i) => (
+          <PassportBookPage
+            key={entry.id}
+            ref={(el) => {
+              pageRefs.current[i] = el
+            }}
+            entry={entry}
+            cover={photosByEntry[entry.id]?.[0]}
+            rotate={i % 2 === 0 ? -6 : 5}
+            onOpen={() => onOpen(entry)}
+          />
+        ))}
+      </div>
+      {entries.length > 1 && (
+        <p className="passport-book-indicator">
+          {activeIndex + 1} of {entries.length}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PassportBookPage({ entry, cover, rotate, onOpen, ref }) {
+  return (
+    <button type="button" className="passport-book-page" ref={ref} onClick={onOpen}>
+      <div className="passport-book-page-media">
+        <Image src={cover?.url} alt="" aspectRatio="4 / 3" className="passport-book-page-image" />
+        <StampMark entry={entry} rotate={rotate} />
+      </div>
+      {entry.note && <p className="passport-book-page-note">{entry.note}</p>}
+    </button>
+  )
+}
+
+// The "inked, bordered, slightly rotated" stamp mark from
+// design-reference/DESIGN_REFERENCE.md's Passport section — a passport
+// stamp look built from the design tokens (accent color, no new palette),
+// not a literal ink-red graphic.
+function StampMark({ entry, rotate }) {
+  return (
+    <div className="passport-stamp-mark" style={{ transform: `rotate(${rotate}deg)` }} aria-hidden="true">
+      <span className="passport-stamp-mark-place">{entry.place_name}</span>
+      {entry.country && <span className="passport-stamp-mark-country">{entry.country}</span>}
+      {entry.visited_on && <span className="passport-stamp-mark-date">{formatDate(entry.visited_on)}</span>}
+    </div>
+  )
+}
+
+function PassportTile({ entry, cover, onClick }) {
+  return (
+    <button type="button" className="passport-tile" onClick={onClick}>
+      <Image src={cover?.url} alt="" aspectRatio="1" className="passport-tile-image" />
+      <span className="passport-tile-name">{entry.place_name}</span>
+      {entry.visited_on && <span className="passport-tile-date">{formatDate(entry.visited_on)}</span>}
+    </button>
   )
 }
 
@@ -367,6 +568,7 @@ function PhotoPicker({ files, onFilesChange, statuses }) {
 function PassportEntryForm({ userId, onCancel, onCreated }) {
   const [placeName, setPlaceName] = useState('')
   const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
   const [visitedOn, setVisitedOn] = useState('')
   const [note, setNote] = useState('')
   const [files, setFiles] = useState([])
@@ -408,6 +610,7 @@ function PassportEntryForm({ userId, onCancel, onCreated }) {
         owner: userId,
         place_name: name,
         city: city.trim() || null,
+        country: country.trim() || null,
         lat,
         lng,
         visited_on: visitedOn || null,
@@ -430,11 +633,11 @@ function PassportEntryForm({ userId, onCancel, onCreated }) {
 
   return (
     <main className="passport-page">
-      <div className="explore-header">
+      <div className="passport-form-header">
         <button type="button" className="bucket-list-back" onClick={onCancel}>
           ← Passport
         </button>
-        <h1>Add a stamp</h1>
+        <h1 className="passport-form-title">Add a stamp</h1>
       </div>
 
       <form className="passport-form" onSubmit={handleSubmit}>
@@ -451,6 +654,13 @@ function PassportEntryForm({ userId, onCancel, onCreated }) {
           placeholder="City — e.g. Kyoto"
           value={city}
           onChange={(event) => setCity(event.target.value)}
+        />
+        <input
+          type="text"
+          className="intake-notes-input"
+          placeholder="Country — e.g. Japan"
+          value={country}
+          onChange={(event) => setCountry(event.target.value)}
         />
         <input
           type="date"
@@ -479,12 +689,26 @@ function PassportEntryForm({ userId, onCancel, onCreated }) {
   )
 }
 
+// Shares only text (place, date, note) — never a signed photo URL, per
+// design-reference/DESIGN_REFERENCE.md: photos stay private, the signed URLs
+// this app hands out are short-lived and scoped to the viewer's own session,
+// so sharing one out would either break immediately or (worse) leak a real
+// URL that momentarily still works.
+function buildShareText(entry) {
+  const lines = [entry.place_name]
+  if (entry.city) lines.push(entry.country ? `${entry.city}, ${entry.country}` : entry.city)
+  if (entry.visited_on) lines.push(formatDate(entry.visited_on))
+  if (entry.note) lines.push('', entry.note)
+  return lines.join('\n')
+}
+
 function PassportDetail({ entry, photos, userId, onBack, onUpdated, onDelete, onPhotoAdded, onPhotoRemoved }) {
   const [visitedOn, setVisitedOn] = useState(entry.visited_on || '')
   const [note, setNote] = useState(entry.note || '')
   const [newFiles, setNewFiles] = useState([])
   const [statuses, setStatuses] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [shareStatus, setShareStatus] = useState('idle') // 'idle' | 'copied'
 
   function handleStatus(index, status) {
     setStatuses((prev) => {
@@ -523,9 +747,28 @@ function PassportDetail({ entry, photos, userId, onBack, onUpdated, onDelete, on
     setStatuses([])
   }
 
+  async function handleShare() {
+    const text = buildShareText(entry)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: entry.place_name, text })
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('passport share failed:', err)
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      setShareStatus('copied')
+      setTimeout(() => setShareStatus('idle'), 2000)
+    } catch (err) {
+      console.error('passport share clipboard fallback failed:', err)
+    }
+  }
+
   return (
     <main className="passport-page">
-      <div className="explore-header">
+      <div className="passport-detail-header">
         <button type="button" className="bucket-list-back" onClick={onBack}>
           ← Passport
         </button>
@@ -535,55 +778,62 @@ function PassportDetail({ entry, photos, userId, onBack, onUpdated, onDelete, on
             ×
           </button>
         </div>
-        {entry.city && <p className="explore-subtitle">{entry.city}</p>}
+        {(entry.city || entry.country) && (
+          <p className="explore-subtitle">{[entry.city, entry.country].filter(Boolean).join(', ')}</p>
+        )}
+        <button type="button" className="passport-share-btn" onClick={handleShare}>
+          {shareStatus === 'copied' ? 'Copied to clipboard' : 'Share'}
+        </button>
       </div>
 
-      {photos.length > 0 && (
-        <div className="passport-detail-photos">
-          {photos.map((photo) => (
-            <div key={photo.id} className="passport-detail-photo">
-              {photo.url ? <img src={photo.url} alt="" /> : <div className="passport-stamp-placeholder" aria-hidden="true" />}
-              <button
-                type="button"
-                className="bucket-list-icon-btn passport-detail-photo-remove"
-                aria-label="Remove photo"
-                onClick={() => onPhotoRemoved(photo)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
+      <div className="passport-detail-body">
+        {photos.length > 0 && (
+          <div className="passport-detail-photos">
+            {photos.map((photo) => (
+              <div key={photo.id} className="passport-detail-photo">
+                {photo.url ? <img src={photo.url} alt="" /> : <div className="passport-photo-placeholder" aria-hidden="true" />}
+                <button
+                  type="button"
+                  className="bucket-list-icon-btn passport-detail-photo-remove"
+                  aria-label="Remove photo"
+                  onClick={() => onPhotoRemoved(photo)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <PhotoPicker files={newFiles} onFilesChange={handleAddPhotos} statuses={statuses} />
+        {uploading && <p className="passport-upload-note">Uploading…</p>}
+
+        <div className="passport-form">
+          <label className="intake-field-label" htmlFor="passport-visited-on">
+            Visited
+          </label>
+          <input
+            id="passport-visited-on"
+            type="date"
+            className="intake-notes-input"
+            value={visitedOn}
+            onChange={(event) => setVisitedOn(event.target.value)}
+            onBlur={saveIfChanged}
+            max={new Date().toISOString().slice(0, 10)}
+          />
+
+          <label className="intake-field-label" htmlFor="passport-note">
+            Note
+          </label>
+          <textarea
+            id="passport-note"
+            className="passport-note-input"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            onBlur={saveIfChanged}
+            rows={4}
+          />
         </div>
-      )}
-
-      <PhotoPicker files={newFiles} onFilesChange={handleAddPhotos} statuses={statuses} />
-      {uploading && <p className="passport-upload-note">Uploading…</p>}
-
-      <div className="passport-form">
-        <label className="intake-field-label" htmlFor="passport-visited-on">
-          Visited
-        </label>
-        <input
-          id="passport-visited-on"
-          type="date"
-          className="intake-notes-input"
-          value={visitedOn}
-          onChange={(event) => setVisitedOn(event.target.value)}
-          onBlur={saveIfChanged}
-          max={new Date().toISOString().slice(0, 10)}
-        />
-
-        <label className="intake-field-label" htmlFor="passport-note">
-          Note
-        </label>
-        <textarea
-          id="passport-note"
-          className="passport-note-input"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          onBlur={saveIfChanged}
-          rows={4}
-        />
       </div>
     </main>
   )
