@@ -1,0 +1,103 @@
+/* Travel ← Amex Trips (design-reference/DESIGN_REFERENCE.md). Runs edge to
+   edge like Bucket List/Passport (see BucketListPage.css/PassportPage.css) —
+   no page-level max-width, individual sections apply their own
+   var(--space-5) side padding. Reuses .explore-empty from App.css (eagerly
+   loaded — App.jsx's own bundle) and .bucket-list-icon-btn from App.css
+   (shared with Bucket List/Passport already) for the local-only remove
+   control, rather than a third copy of the same 44px icon-button rule. */
+.trips-page {
+  background: var(--color-page-bg);
+  padding-bottom: var(--space-7);
+}
+
+.trips-page-segmented {
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.trips-page-loading {
+  padding: 0 var(--space-5);
+}
+
+/* Photo-card grid — same shape as Bucket List's list-of-lists grid (see
+   .bucket-list-grid in BucketListPage.css), applied to a trip instead of a
+   list. */
+.trips-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+}
+
+.trips-page-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card-bg);
+  border-radius: var(--radius-tile);
+  overflow: hidden;
+}
+
+.trips-page-card-media {
+  display: block;
+}
+
+.trips-page-card-image {
+  border-radius: 0;
+}
+
+/* One-tap share — sharing a plan is this tab's core purpose (see the
+   reference's Travel section), so it gets the same prominent, always-visible
+   round button Bucket List gives its heart action (see .bucket-list-heart-btn
+   in BucketListPage.css), not a footer link that only shows up on hover. */
+.trips-page-share-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 19, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.trips-page-share-btn:hover {
+  color: var(--color-accent);
+}
+
+.trips-page-card-footer {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trips-page-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.trips-page-card-name {
+  font-family: var(--serif);
+  font-size: 17px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Day count and verified/saved date each get their own line — never joined
+   with a middle dot, per the reference's "things to avoid" list. */
+.trips-page-card-meta {
+  font-family: var(--sans);
+  font-size: var(--font-size-meta);
+  color: var(--color-text-secondary);
+}

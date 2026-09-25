@@ -29,10 +29,23 @@ export function getRecentTrips() {
   return readAll()
 }
 
-export function addRecentTrip({ slug, destination, query }) {
+// dayCount/verifiedAt are optional — captured from TripPage.jsx's own
+// payload/verifiedAt at the moment a trip page is viewed (the only client
+// data source available for an anonymous, unowned trip; see TripsPage.jsx's
+// Planned segment, which has no other way to get either for a local-only
+// entry). An entry saved before this field existed just renders without
+// them.
+export function addRecentTrip({ slug, destination, query, dayCount, verifiedAt }) {
   if (!slug) return
   const trips = readAll().filter((t) => t.slug !== slug)
-  trips.unshift({ slug, destination: destination || query, query, addedAt: new Date().toISOString() })
+  trips.unshift({
+    slug,
+    destination: destination || query,
+    query,
+    dayCount: dayCount ?? null,
+    verifiedAt: verifiedAt ?? null,
+    addedAt: new Date().toISOString(),
+  })
   writeAll(trips.slice(0, MAX))
 }
 

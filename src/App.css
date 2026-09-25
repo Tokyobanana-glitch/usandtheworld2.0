@@ -1330,7 +1330,6 @@ a.status-chip:hover {
      breakpoint grows them. */
   .clear-icon,
   .recent-trip-remove,
-  .trips-page-remove,
   .truncate-toggle,
   .result-empty-retry,
   .followup-chip,
@@ -1350,8 +1349,7 @@ a.status-chip:hover {
   .trip-edit-stop-actions button,
   .trip-edit-stop-actions select,
   .clear-icon,
-  .recent-trip-remove,
-  .trips-page-remove {
+  .recent-trip-remove {
     min-width: 44px;
   }
 
@@ -1361,64 +1359,9 @@ a.status-chip:hover {
   }
 }
 
-.trips-page {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 32px 20px 80px;
-  color: #f2f2f5;
-}
-
-.trips-page-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.trips-page-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 14px 16px;
-}
-
-.trips-page-link {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: #f2f2f5;
-  text-decoration: none;
-  min-width: 0;
-}
-
-.trips-page-destination {
-  font-family: var(--serif);
-  font-size: 17px;
-  color: #fff;
-}
-
-.trips-page-date {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.trips-page-remove {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 8px;
-}
-
-.trips-page-remove:hover {
-  color: rgba(255, 255, 255, 0.85);
-}
+/* Travel's own container rules now live in TripsPage.css (edge to edge, same
+   as Bucket List/Passport — see that file's own top-of-file comment), not
+   here. */
 
 /* Lives OUTSIDE .hero-page on purpose — see App.jsx. Own solid background
    matching .hero-page's so the seam between hero and feed is invisible. */
@@ -1755,16 +1698,6 @@ a.status-chip:hover {
   line-height: 1.6;
   color: rgba(242, 242, 245, 0.9);
   margin: 0;
-}
-
-/* Passport now has its own container rules (see PassportPage.css — it runs
-   edge to edge for its stats/hero/book sections, per
-   design-reference/DESIGN_REFERENCE.md's Passport section), same as Bucket
-   List's BucketListPage.css. This override still applies to it (PassportPage
-   renders the "passport-page" class from its own stylesheet, but PageHeader
-   itself is this shared component either way). */
-.trips-page > .page-header--large:first-child {
-  margin: -32px -20px 0;
 }
 
 /* Shared with Bucket List (see BucketListPage.jsx/.css) and Passport

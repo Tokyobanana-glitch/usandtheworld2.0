@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { TurnAnswer } from './App'
 import { addRecentTrip } from './services/recentTrips'
+import { addWatchingTrip, addSharedTrip } from './services/tripTracking'
+import { getSupabaseClient } from './services/supabaseClient'
 import { useAuth } from './AuthContext'
 import { useBucketListQuickSave } from './hooks/useBucketListPlaceKeys'
 import { createPassportEntryFromPlace } from './services/quickSaves'
@@ -18,7 +20,7 @@ function pluralize(n, word) {
 // scrolling conversation. Reads window.__TRIP_DATA__, injected server-side
 // by api/trip-page.js so share previews (OG tags) work before any JS runs.
 export default function TripPage({ data }) {
-  const { user, requestSignIn } = useAuth()
+  const { user, loading: authLoading, requestSignIn } = useAuth()
   const { bucketListKeys, bucketListSaveStatus, onSaveToBucketList } = useBucketListQuickSave()
   const [current, setCurrent] = useState(data)
   const [showPassportPanel, setShowPassportPanel] = useState(false)
@@ -39,11 +41,57 @@ export default function TripPage({ data }) {
   const [editError, setEditError] = useState(null)
 
   useEffect(() => {
-    addRecentTrip({ slug: current.slug, destination: current.payload.destination, query: current.query })
+    addRecentTrip({
+      slug: current.slug,
+      destination: current.payload.destination,
+      query: current.query,
+      dayCount: current.payload.itinerary?.length ?? null,
+      verifiedAt: current.verifiedAt,
+    })
     // Only ever on first mount for this slug — re-verify updates local state,
     // it doesn't navigate here, so this shouldn't re-fire per keystroke etc.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Travel tab's Shared-with-me segment (see services/tripTracking.js):
+  // only decidable for a signed-in viewer, via the same RLS-scoped read the
+  // Planned segment already uses (itineraries select own, see
+  // supabase/005_itinerary_owner_select.sql) — a row comes back only if this
+  // slug's owner is the caller, so an empty result already means "not mine",
+  // with no extra column or endpoint needed. Left undecided (nothing
+  // recorded) for a signed-out viewer, who has no identity to check against.
+  useEffect(() => {
+    if (authLoading || !user) return
+    let cancelled = false
+    async function checkOwnership() {
+      const supabase = getSupabaseClient()
+      if (!supabase) return
+      const { data, error } = await supabase.from('itineraries').select('slug').eq('slug', current.slug).maybeSingle()
+      // A query error (network blip, paused DB) is not evidence of "not
+      // mine" — skip silently rather than mis-recording a false positive;
+      // it'll just get another chance to resolve on a future visit.
+      if (error) {
+        console.error('itineraries ownership check error:', error)
+        return
+      }
+      if (!cancelled && !data) {
+        addSharedTrip({
+          slug: current.slug,
+          destination: current.payload.destination,
+          dayCount: current.payload.itinerary?.length ?? null,
+          verifiedAt: current.verifiedAt,
+        })
+      }
+    }
+    checkOwnership()
+    return () => {
+      cancelled = true
+    }
+    // current.slug/payload/verifiedAt don't change after mount on this page
+    // (re-verify only ever updates newerSlug — see handleReverify), so this
+    // only needs to re-run if auth state itself resolves after mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading])
 
   async function handleReverify() {
     setReverifying(true)
@@ -127,6 +175,12 @@ export default function TripPage({ data }) {
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || 'Something went wrong')
       setWatchStatus('done')
+      addWatchingTrip({
+        slug: current.slug,
+        destination: current.payload.destination,
+        dayCount: current.payload.itinerary?.length ?? null,
+        verifiedAt: current.verifiedAt,
+      })
     } catch (err) {
       setWatchStatus('error')
       setWatchError(err.message || 'Something went wrong — please try again.')
